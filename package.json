@@ -1,0 +1,27 @@
+{
+  "name": "adhera",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Adhera — demo de preafiliación conversacional (datos ficticios)",
+  "packageManager": "pnpm@11.1.3",
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter ./apps/* dev",
+    "dev:api": "pnpm --filter @adhera/api dev",
+    "dev:web": "pnpm --filter @adhera/web dev",
+    "build": "pnpm -r --filter ./apps/* build",
+    "start": "pnpm -r --parallel --filter ./apps/* start",
+    "lint": "pnpm -r --filter ./apps/* lint",
+    "typecheck": "pnpm -r --filter ./apps/* typecheck",
+    "test": "pnpm --filter @adhera/api test",
+    "test:e2e": "node scripts/e2e-prepare.mjs && playwright test",
+    "db:up": "docker compose up -d",
+    "db:migrate": "pnpm --filter @adhera/api db:migrate",
+    "db:deploy": "pnpm --filter @adhera/api db:deploy",
+    "db:seed": "pnpm --filter @adhera/api db:seed",
+    "db:reset": "pnpm --filter @adhera/api db:reset"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.0",
+    "typescript": "5.9.3"
+  }
+}

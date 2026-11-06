@@ -1,0 +1,267 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Conexión directa (sin pooler) para migraciones. En local puede ser igual a DATABASE_URL.
+  directUrl = env("DIRECT_URL")
+}
+
+enum VersionStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum QuestionType {
+  text
+  single_choice
+  number
+  yes_no
+  date
+}
+
+enum ApplicationStatus {
+  IN_PROGRESS
+  PENDING_REVIEW
+  CONTACTED
+  INTERVIEW_SCHEDULED
+  CLOSED
+}
+
+enum Channel {
+  SIMULATOR
+  WHATSAPP
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  SKIPPED
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ActorType {
+  APPLICANT
+  ADVISOR
+  SYSTEM
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id           String      @id @default(cuid())
+  displayName  String
+  email        String      @unique
+  passwordHash String
+  createdAt    DateTime    @default(now())
+  applications Application[]
+  notes        Note[]
+  interviews   Interview[]
+}
+
+model Questionnaire {
+  id        String                 @id @default(cuid())
+  name      String
+  createdAt DateTime               @default(now())
+  versions  QuestionnaireVersion[]
+}
+
+model QuestionnaireVersion {
+  id              String                @id @default(cuid())
+  questionnaireId String
+  questionnaire   Questionnaire         @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
+  version         Int
+  status          VersionStatus         @default(DRAFT)
+  publishedAt     DateTime?
+  createdAt       DateTime              @default(now())
+  questions       Question[]
+  sessions        ConversationSession[]
+
+  @@unique([questionnaireId, version])
+  @@index([status])
+}
+
+model Question {
+  id             String               @id @default(cuid())
+  versionId      String
+  version        QuestionnaireVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  key            String
+  label          String
+  shortLabel     String?
+  type           QuestionType
+  required       Boolean              @default(true)
+  order          Int
+  optionsJson    Json?
+  conditionJson  Json?
+  validationJson Json?
+  answers        Answer[]
+
+  @@unique([versionId, key])
+  @@index([versionId, order])
+}
+
+model Application {
+  id             String                @id @default(cuid())
+  displayName    String
+  status         ApplicationStatus     @default(IN_PROGRESS)
+  assignedUserId String?
+  assignedUser   User?                 @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
+  channel        Channel               @default(SIMULATOR)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  completedAt    DateTime?
+  /// El interesado pidió hablar con una persona (derivación a asesor).
+  handoffRequestedAt DateTime?
+  sessions       ConversationSession[]
+  events         ActivityEvent[]
+  notes          Note[]
+  interviews     Interview[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ConversationSession {
+  id                 String               @id @default(cuid())
+  applicationId      String
+  application        Application          @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  versionId          String
+  version            QuestionnaireVersion @relation(fields: [versionId], references: [id])
+  channel            Channel              @default(SIMULATOR)
+  contactId          String?
+  contact            ChannelContact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  currentQuestionKey String?
+  status             SessionStatus        @default(IN_PROGRESS)
+  resumeTokenHash    String
+  startedAt          DateTime             @default(now())
+  completedAt        DateTime?
+  answers            Answer[]
+
+  @@index([contactId, status])
+}
+
+/// Remitente de un canal externo, identificado por su número y el número receptor.
+model ChannelContact {
+  id                  String                @id @default(cuid())
+  channel             Channel
+  /// wa_id del remitente (sólo visible para asesores autenticados).
+  externalUserId      String
+  /// phone_number_id del número de la empresa que recibió el mensaje.
+  externalChannelId   String
+  consentAt           DateTime?
+  optedOutAt          DateTime?
+  /// Último mensaje entrante: define la ventana de atención de 24 h.
+  lastInboundAt       DateTime?
+  /// Bot en pausa por derivación a asesor.
+  botPausedAt         DateTime?
+  invalidStreak       Int                   @default(0)
+  lastHandoffNoticeAt DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  sessions            ConversationSession[]
+  inbound             InboundMessage[]
+  deliveries          MessageDelivery[]
+
+  @@unique([channel, externalUserId, externalChannelId])
+}
+
+/// Mensajes entrantes ya recibidos (deduplicación por id del proveedor). No guarda contenido.
+model InboundMessage {
+  id          String          @id
+  contactId   String?
+  contact     ChannelContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  type        String
+  receivedAt  DateTime        @default(now())
+  processedAt DateTime?
+
+  @@index([receivedAt])
+}
+
+/// Mensajes salientes y su estado de entrega. No guarda contenido.
+model MessageDelivery {
+  id          String         @id @default(cuid())
+  contactId   String
+  contact     ChannelContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  sessionId   String?
+  /// Id asignado por el proveedor (wamid).
+  externalId  String?        @unique
+  kind        String
+  status      DeliveryStatus @default(PENDING)
+  attempts    Int            @default(0)
+  errorCode   String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([contactId, createdAt])
+}
+
+model Answer {
+  id        String              @id @default(cuid())
+  sessionId String
+  session   ConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  questionId String
+  question  Question            @relation(fields: [questionId], references: [id])
+  valueJson Json?
+  rawText   String?
+  requestId String?             @unique
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@unique([sessionId, questionId])
+}
+
+model ActivityEvent {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  actorType     ActorType
+  actorId       String?
+  kind          String
+  payloadJson   Json?
+  createdAt     DateTime    @default(now())
+
+  @@index([applicationId, createdAt])
+  @@index([createdAt])
+}
+
+model Note {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  authorId      String
+  author        User        @relation(fields: [authorId], references: [id])
+  content       String
+  createdAt     DateTime    @default(now())
+
+  @@index([applicationId, createdAt])
+}
+
+model Interview {
+  id            String          @id @default(cuid())
+  applicationId String
+  application   Application     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  advisorId     String
+  advisor       User            @relation(fields: [advisorId], references: [id])
+  scheduledAt   DateTime
+  status        InterviewStatus @default(SCHEDULED)
+  notes         String?
+  nextStep      String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([scheduledAt])
+}

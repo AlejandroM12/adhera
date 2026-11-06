@@ -1,0 +1,78 @@
+# Blueprint de Render para Adhera (entorno público de demostración).
+# Crea dos servicios web: la API (NestJS) y el panel (Next.js). La base es Neon (externa).
+# Los valores marcados con `sync: false` se cargan a mano en el dashboard de Render
+# (nunca en este archivo). Ver docs/DEPLOY.md.
+#
+# Importante: no definir NODE_ENV=production en el build; pnpm omitiría las dependencias
+# de desarrollo necesarias para compilar. La API usa APP_ENV para el entorno lógico.
+
+services:
+  - type: web
+    name: adhera-api
+    runtime: node
+    region: virginia
+    plan: starter # "free" funciona, pero se suspende sin tráfico y los webhooks llegan con demora.
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @adhera/api build &&
+      pnpm --filter @adhera/api exec prisma migrate deploy &&
+      pnpm --filter @adhera/api db:seed
+    startCommand: node apps/api/dist/main.js
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL # Neon: cadena "pooled" (host con -pooler) + ?sslmode=require&pgbouncer=true
+        sync: false
+      - key: DIRECT_URL # Neon: cadena directa (sin -pooler) + ?sslmode=require, para migraciones
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: WEB_ORIGIN # URL pública del panel, ej. https://adhera-web.onrender.com
+        sync: false
+      - key: ADMIN_EMAIL # administrador inicial (lo crea el seed sólo si no existe)
+        sync: false
+      - key: ADMIN_PASSWORD # mínimo 12 caracteres
+        sync: false
+      - key: ADMIN_NAME
+        value: Administrador
+      - key: SEED_DEMO_DATA # "true" carga casos ficticios de demostración
+        value: "true"
+      - key: SIMULATOR_ENABLED
+        value: "true"
+      - key: WHATSAPP_ENABLED
+        value: "false" # pasar a "true" cuando estén cargadas las credenciales de Meta
+      - key: WHATSAPP_VERIFY_TOKEN
+        generateValue: true
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_GRAPH_VERSION
+        value: v23.0
+
+  - type: web
+    name: adhera-web
+    runtime: node
+    region: virginia
+    plan: starter
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @adhera/web build
+    startCommand: pnpm --filter @adhera/web start
+    healthCheckPath: /login
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: API_URL # URL pública de la API, ej. https://adhera-api.onrender.com (se fija al compilar)
+        sync: false
+      - key: NEXT_PUBLIC_SHOW_DEMO_CREDENTIALS
+        value: "false"

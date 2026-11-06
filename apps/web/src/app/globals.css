@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+/* Paleta Adhera: azul petróleo, turquesa y neutros de alto contraste. */
+@theme {
+  --color-petrol-50: #eef7f8;
+  --color-petrol-100: #d5eaee;
+  --color-petrol-200: #aed6de;
+  --color-petrol-300: #7cb9c6;
+  --color-petrol-400: #4795a7;
+  --color-petrol-500: #2c788c;
+  --color-petrol-600: #1f6073;
+  --color-petrol-700: #1a4e5e;
+  --color-petrol-800: #17404d;
+  --color-petrol-900: #123440;
+  --color-petrol-950: #0a222b;
+
+  --color-turq-50: #effcf9;
+  --color-turq-100: #c9f6ec;
+  --color-turq-200: #93ecda;
+  --color-turq-300: #57dac4;
+  --color-turq-400: #27c0aa;
+  --color-turq-500: #0fa391;
+  --color-turq-600: #0a8377;
+  --color-turq-700: #0d6961;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-slate-50);
+  color: var(--color-slate-900);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Fondo sutil del chat (patrón propio, sin imágenes externas). */
+.chat-bg {
+  background-color: #e9f1f2;
+  background-image: radial-gradient(rgba(26, 78, 94, 0.07) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+@keyframes msg-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.msg-in {
+  animation: msg-in 180ms ease-out;
+}
+
+@keyframes typing {
+  0%, 80%, 100% { opacity: 0.25; }
+  40% { opacity: 1; }
+}
+.typing-dot {
+  animation: typing 1.2s infinite ease-in-out;
+}
