@@ -40,7 +40,7 @@ y Graph API oficial.
 ## Paso a paso
 
 ### 1. Repositorio (lo hacés vos)
-1. Inicializá git y subí el proyecto a un repositorio **privado** de GitHub (no hay commits hechos por Claude).
+1. El proyecto está versionado en el repositorio **privado** de GitHub `alejandrom12/adhera` (rama `main`).
 2. Verificá que **no** se suban `apps/api/.env` ni otros `.env` (están en `.gitignore`).
 
 ### 2. Neon
