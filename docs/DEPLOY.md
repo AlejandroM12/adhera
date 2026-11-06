@@ -31,11 +31,28 @@ y Graph API oficial.
 
 | Servicio | Plan | Costo aprox. | Limitaciones |
 |---|---|---|---|
-| Neon | Free | USD 0 | ~0,5 GB por proyecto; la base se suspende sin uso (arranca en ~1 s). |
-| Render (API) | Free | USD 0 | Se duerme tras ~15 min sin tráfico: el primer webhook puede tardar 30–60 s (Meta reintenta). |
-| Render (API) | Starter | ~USD 7/mes | Siempre activo. **Recomendado para la API** si probás WhatsApp en vivo. |
-| Render (web) | Free / Starter | 0 / ~USD 7/mes | En Free, la primera visita tras inactividad tarda. |
+`render.yaml` usa **sólo el plan free** de Render: dos servicios web, sin bases, workers, discos,
+servicios privados ni `preDeployCommand` (todo eso es pago). No debería pedir tarjeta para crearlo.
+
+| Servicio | Plan | Costo aprox. | Limitaciones |
+|---|---|---|---|
+| Neon | Free | USD 0 | ~0,5 GB por proyecto y horas de cómputo mensuales limitadas; la base se suspende sin uso (arranca en ~1 s). |
+| Render (API) | Free | USD 0 | 512 MB de RAM y CPU compartida. Se duerme tras ~15 min sin tráfico: la primera petición tarda 30–60 s y un webhook puede fallar mientras despierta (ver limitaciones). |
+| Render (web) | Free | USD 0 | Mismas condiciones: la primera visita tras inactividad tarda. |
+| Render (opcional) | Starter | ~USD 7/mes por servicio | Siempre activo. Sólo si más adelante decidís pagar (cambiar `plan: free` → `starter`). |
 | WhatsApp Cloud API | — | USD 0 en esta demo | Sólo respondemos dentro de la ventana de 24 h (mensajes de servicio, sin plantillas). Ver docs/WHATSAPP.md. |
+
+**Limitaciones del plan free de Render** (verificá las condiciones vigentes):
+- Horas de instancia gratuitas mensuales compartidas por todo el workspace (~750 h). Dos servicios despiertos todo el mes
+  superarían ese total; como se duermen sin tráfico, en una demo normalmente alcanza. Si se agotan, se suspenden hasta el mes siguiente.
+- Minutos de build mensuales limitados: `autoDeploy` está apagado para no compilar en cada push.
+- Sin `preDeployCommand`: las migraciones corren al final del build (ver paso 3). Sin shell ni disco persistente.
+- Los servicios pueden reiniciarse en cualquier momento: los límites anti-abuso en memoria se reinician con ellos.
+- **WhatsApp con la API dormida:** si un webhook llega mientras la API arranca, puede fallar o demorarse. Meta reintenta
+  las entregas fallidas durante un tiempo, pero **no hay garantía** de que todos los mensajes se procesen ni de cuándo:
+  un mensaje puede llegar tarde o perderse, y el interesado tendría que volver a escribir (o usar `CONTINUAR`).
+  Es una limitación del plan gratuito; con una instancia siempre activa (plan pago) el riesgo baja mucho.
+  Para una prueba en vivo, abrí `https://<api>/health` un minuto antes para despertarla.
 
 ## Paso a paso
 
@@ -47,12 +64,13 @@ y Graph API oficial.
 1. Creá una cuenta en neon.tech y un proyecto nuevo `adhera` (región sugerida: AWS US East / N. Virginia, cerca de Render "Virginia").
 2. En **Connection details** copiá dos cadenas para la base `neondb` (o creá `adhera`):
    - **Pooled** (host con `-pooler`) → `DATABASE_URL`, agregando `?sslmode=require&pgbouncer=true&connect_timeout=15`.
-   - **Direct** (sin `-pooler`) → `DIRECT_URL`, con `?sslmode=require`.
+   - **Direct** (sin `-pooler`) → `DIRECT_URL`, con `?sslmode=require&connect_timeout=15`.
 3. No importes ningún dump local: las migraciones y el seed crean todo en el primer deploy.
 
 ### 3. Render (Blueprint)
 1. En Render: **New → Blueprint**, conectá el repositorio. Render lee `render.yaml` y propone dos servicios:
-   `adhera-api` y `adhera-web` (plan Starter; podés cambiar a Free).
+   `adhera-api` y `adhera-web`, ambos en plan **Free**. Si Render muestra un plan pago o pide tarjeta, revisá que
+   el Blueprint lea la última versión de `render.yaml` (rama `main`).
 2. Completá las variables marcadas como `sync: false`:
 
    **adhera-api**
@@ -72,8 +90,12 @@ y Graph API oficial.
    |---|---|
    | `API_URL` | `https://adhera-api.onrender.com` (la URL real de la API) |
 
-3. **Apply**. El build de la API instala, compila, aplica migraciones (`prisma migrate deploy`) y corre el
-   seed de producción, que crea **sólo** tu administrador, el cuestionario y (si `SEED_DEMO_DATA=true`) casos ficticios.
+3. **Apply**. El build de la API instala, compila y aplica migraciones con `prisma migrate deploy`
+   (usa `DIRECT_URL`; sólo aplica migraciones pendientes, nunca borra ni resetea; si falla, el build falla y
+   sigue activo el deploy anterior). Después corre el seed con `SEED_IF_EMPTY=true`: **sólo en el primer deploy**
+   (base nueva, sin usuarios, cuestionarios ni solicitudes) crea tu administrador, el cuestionario y
+   (si `SEED_DEMO_DATA=true`) casos ficticios. En los builds siguientes el seed no escribe nada. Nunca
+   sobrescribe registros existentes; si la base tiene datos pero no usuarios, sólo crea el administrador.
 4. Si Render asignó URLs distintas (por ejemplo con sufijo), corregí `WEB_ORIGIN` y `API_URL` y redeployá.
    `API_URL` se fija al compilar el panel: después de cambiarla usá **Manual Deploy → Clear build cache & deploy** en `adhera-web`.
 

@@ -93,4 +93,4 @@ con los botones. Completá el cuestionario y abrí `https://<web>/solicitudes`: 
 | `131030` | Tu número no está en la lista de destinatarios de prueba | Agregalo y verificalo en API Setup. |
 | `131047` | Pasaron más de 24 h | Volvé a escribir desde el celular para reabrir la ventana. |
 | `401 Firma inválida` en los logs de Render | `WHATSAPP_APP_SECRET` incorrecto | Copiá de nuevo el App Secret. |
-| La primera respuesta tarda | Plan Free de Render (instancia dormida) | Usá Starter para la API o esperá: Meta reintenta. |
+| La primera respuesta tarda | Plan Free de Render (instancia dormida) | Abrí `https://<api>/health` antes de probar para despertarla. Meta reintenta, pero sin garantía: si no hay respuesta, volvé a escribir o enviá `CONTINUAR`. |

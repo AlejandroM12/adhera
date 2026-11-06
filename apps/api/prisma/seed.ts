@@ -316,6 +316,26 @@ async function seedApplications(advisorIds: string[], questions: { id: string; k
 }
 
 async function main() {
+  // Build de Render (SEED_IF_EMPTY=true): los datos ficticios sólo se cargan en una base nueva.
+  // - Con usuarios: no escribe nada.
+  // - Sin usuarios pero con datos (p. ej. se borró el admin para rotar la contraseña): sólo crea el admin.
+  // Nunca sobrescribe: los upsert usan `update: {}` y los casos demo con id existente se saltean.
+  if (process.env.SEED_IF_EMPTY === 'true') {
+    const [users, questionnaires, applications] = await Promise.all([
+      prisma.user.count(),
+      prisma.questionnaire.count(),
+      prisma.application.count(),
+    ]);
+    if (users > 0) {
+      console.log(`Seed omitido: la base ya está inicializada (${users} usuario(s)). No se modificó nada.`);
+      return;
+    }
+    if (questionnaires > 0 || applications > 0) {
+      await seedUsers();
+      console.log('Seed: base existente sin usuarios; sólo se creó el administrador (sin datos ficticios).');
+      return;
+    }
+  }
   const advisorIds = await seedUsers();
   const questions = await seedQuestionnaire();
   // En producción los casos ficticios son opcionales (SEED_DEMO_DATA=true).

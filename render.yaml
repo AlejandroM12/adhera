@@ -1,24 +1,30 @@
-# Blueprint de Render para Adhera (entorno público de demostración).
-# Crea dos servicios web: la API (NestJS) y el panel (Next.js). La base es Neon (externa).
+# Blueprint de Render para Adhera (entorno público de demostración, plan gratuito).
+# Crea dos servicios web en plan free: la API (NestJS) y el panel (Next.js).
+# La base es Neon (externa): no se crea ninguna base, worker, disco ni servicio privado en Render.
 # Los valores marcados con `sync: false` se cargan a mano en el dashboard de Render
 # (nunca en este archivo). Ver docs/DEPLOY.md.
 #
-# Importante: no definir NODE_ENV=production en el build; pnpm omitiría las dependencias
-# de desarrollo necesarias para compilar. La API usa APP_ENV para el entorno lógico.
+# Notas del plan free:
+# - No admite preDeployCommand: las migraciones corren al final del buildCommand. Si una migración
+#   falla, el build falla y sigue activo el deploy anterior.
+# - El seed sólo carga datos si la base está vacía (primer deploy). En los siguientes builds no escribe nada.
+# - 512 MB de RAM: los procesos arrancan con `node` directo (sin pnpm de por medio) y heap acotado.
+# - No definir NODE_ENV=production ni NODE_OPTIONS en el entorno: afectan el build
+#   (pnpm omitiría devDependencies y el heap del build quedaría limitado). La API usa APP_ENV.
 
 services:
   - type: web
     name: adhera-api
     runtime: node
     region: virginia
-    plan: starter # "free" funciona, pero se suspende sin tráfico y los webhooks llegan con demora.
+    plan: free
     buildCommand: >-
       corepack enable &&
       pnpm install --frozen-lockfile &&
       pnpm --filter @adhera/api build &&
       pnpm --filter @adhera/api exec prisma migrate deploy &&
-      pnpm --filter @adhera/api db:seed
-    startCommand: node apps/api/dist/main.js
+      SEED_IF_EMPTY=true pnpm --filter @adhera/api db:seed
+    startCommand: node --max-old-space-size=320 apps/api/dist/main.js
     healthCheckPath: /health
     autoDeploy: false
     envVars:
@@ -26,21 +32,21 @@ services:
         value: "22"
       - key: APP_ENV
         value: production
-      - key: DATABASE_URL # Neon: cadena "pooled" (host con -pooler) + ?sslmode=require&pgbouncer=true
+      - key: DATABASE_URL # Neon: cadena "pooled" (host con -pooler) + ?sslmode=require&pgbouncer=true&connect_timeout=15
         sync: false
-      - key: DIRECT_URL # Neon: cadena directa (sin -pooler) + ?sslmode=require, para migraciones
+      - key: DIRECT_URL # Neon: cadena directa (sin -pooler) + ?sslmode=require&connect_timeout=15, para migraciones
         sync: false
       - key: SESSION_SECRET
         generateValue: true
       - key: WEB_ORIGIN # URL pública del panel, ej. https://adhera-web.onrender.com
         sync: false
-      - key: ADMIN_EMAIL # administrador inicial (lo crea el seed sólo si no existe)
+      - key: ADMIN_EMAIL # administrador inicial (lo crea el seed en el primer deploy)
         sync: false
       - key: ADMIN_PASSWORD # mínimo 12 caracteres
         sync: false
       - key: ADMIN_NAME
         value: Administrador
-      - key: SEED_DEMO_DATA # "true" carga casos ficticios de demostración
+      - key: SEED_DEMO_DATA # "true" carga casos ficticios de demostración (sólo en el primer deploy)
         value: "true"
       - key: SIMULATOR_ENABLED
         value: "true"
@@ -61,12 +67,12 @@ services:
     name: adhera-web
     runtime: node
     region: virginia
-    plan: starter
+    plan: free
     buildCommand: >-
       corepack enable &&
       pnpm install --frozen-lockfile &&
       pnpm --filter @adhera/web build
-    startCommand: pnpm --filter @adhera/web start
+    startCommand: cd apps/web && node --max-old-space-size=320 node_modules/next/dist/bin/next start
     healthCheckPath: /login
     autoDeploy: false
     envVars:
@@ -76,3 +82,5 @@ services:
         sync: false
       - key: NEXT_PUBLIC_SHOW_DEMO_CREDENTIALS
         value: "false"
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
