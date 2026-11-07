@@ -1,6 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpException, HttpStatus, Post, Req, Res, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { RateLimiter } from '../common/rate-limiter';
+import { clientIp } from '../common/client-ip';
 import { config } from '../config/env';
 import { z } from 'zod';
 import { parse } from '../common/zod';
@@ -20,7 +21,7 @@ export class AuthController {
   @HttpCode(200)
   async login(@Body() body: unknown, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const { email, password } = parse(LoginSchema, body);
-    const key = `${email.toLowerCase()}|${req.ip}`;
+    const key = `${email.toLowerCase()}|${clientIp(req, config().PROXY_SECRET)}`;
     if (!loginFailures.peek(key)) {
       throw new HttpException('Demasiados intentos fallidos. Esperá unos minutos.', HttpStatus.TOO_MANY_REQUESTS);
     }

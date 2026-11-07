@@ -43,6 +43,11 @@ async function bootstrap() {
   new Logger('Bootstrap').log(
     `Adhera API (${cfg.APP_ENV}) en puerto ${port} · WhatsApp ${cfg.WHATSAPP_ENABLED ? 'habilitado' : 'deshabilitado'}`,
   );
+  if (cfg.APP_ENV === 'production' && !cfg.PROXY_SECRET) {
+    new Logger('Bootstrap').warn(
+      'PROXY_SECRET no está definida: los límites por IP del simulador se comparten entre todos los visitantes (sigue activo el tope global).',
+    );
+  }
 }
 
 bootstrap().catch((e: Error) => {

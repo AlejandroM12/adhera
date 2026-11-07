@@ -58,6 +58,11 @@ Si `pnpm install` falla en Windows con `EPERM ... query_engine-windows.dll.node`
 6. En `/entrevistas` marcala como realizada con el próximo paso.
 7. En `/cuestionarios` creá un borrador, cambiá un texto o una condición, guardá y publicá: las sesiones nuevas usan la versión nueva; las anteriores conservan la suya.
 
+### Demo pública `/demo`
+- Simulador conversacional para mostrar a interesados, **sin login**, identificado como simulador y con aviso de datos ficticios.
+  Usa el mismo componente y los mismos endpoints que `/simulador` (sin enlace al panel). Las solicitudes llegan al panel del asesor.
+- Límites: 30 conversaciones nuevas por visitante y por hora, 300 en total por hora, 60 respuestas cada 10 min por conversación.
+
 ### WhatsApp y despliegue público
 - **WhatsApp Cloud API:** `WhatsAppCloudAdapter` sobre el mismo motor conversacional (`apps/api/src/whatsapp`). Webhook firmado en `/webhooks/whatsapp`, consentimiento, derivación a asesor, deduplicación, reintentos y estados de entrega. Configuración en [`docs/WHATSAPP.md`](docs/WHATSAPP.md).
 - **Despliegue:** Render (API y panel) + Neon (PostgreSQL) con `render.yaml`. Guía y costos en [`docs/DEPLOY.md`](docs/DEPLOY.md).

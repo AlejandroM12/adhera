@@ -8,6 +8,8 @@ export const E2E = {
   apiPort: '4100',
   webPort: '3100',
   graphPort: '4199',
+  // Clave ficticia compartida entre panel y API sólo para pruebas.
+  proxySecret: 'e2e-proxy-secret-only-for-local-tests',
   // Credenciales ficticias sólo para pruebas (el Graph API es un servidor falso local).
   whatsapp: {
     WHATSAPP_ENABLED: 'true',

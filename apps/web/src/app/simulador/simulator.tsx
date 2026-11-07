@@ -24,7 +24,11 @@ function readStored(): Stored | null {
   }
 }
 
-export function Simulator() {
+/**
+ * Simulador conversacional público (sin login). Lo usan /demo (demostración comercial) y /simulador.
+ * Usa los endpoints públicos de sesiones: el motor conversacional y la validación viven en la API.
+ */
+export function Simulator({ basePath = '/simulador', showPanelLink = true }: { basePath?: '/demo' | '/simulador'; showPanelLink?: boolean }) {
   const params = useSearchParams();
   const router = useRouter();
   const [creds, setCreds] = useState<Stored | null>(null);
@@ -63,14 +67,14 @@ export function Simulator() {
     const s = params.get('s');
     const t = params.get('t');
     if (s && t) {
-      router.replace('/simulador');
+      router.replace(basePath);
       void load({ sessionId: s, token: t });
       return;
     }
     const stored = readStored();
     if (stored) void load(stored);
     else setPhase('notice');
-  }, [params, router, load]);
+  }, [params, router, load, basePath]);
 
   async function start() {
     setBusy(true);
@@ -136,7 +140,7 @@ export function Simulator() {
 
   async function copyResumeLink() {
     if (!creds) return;
-    const url = `${window.location.origin}/simulador?s=${encodeURIComponent(creds.sessionId)}&t=${encodeURIComponent(creds.token)}`;
+    const url = `${window.location.origin}${basePath}?s=${encodeURIComponent(creds.sessionId)}&t=${encodeURIComponent(creds.token)}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -153,9 +157,13 @@ export function Simulator() {
     <div className="flex min-h-dvh flex-col bg-petrol-950 sm:items-center sm:justify-center sm:p-6">
       <div className="mb-4 hidden w-full max-w-md items-center justify-between sm:flex">
         <Logo light />
-        <Link href="/solicitudes" className="text-sm text-petrol-200 hover:text-white">
-          Panel de asesores →
-        </Link>
+        {showPanelLink ? (
+          <Link href="/solicitudes" className="text-sm text-petrol-200 hover:text-white">
+            Panel de asesores →
+          </Link>
+        ) : (
+          <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-petrol-100">Demostración</span>
+        )}
       </div>
 
       <div className="flex w-full flex-1 flex-col overflow-hidden bg-white sm:h-[760px] sm:max-h-[88dvh] sm:max-w-md sm:flex-none sm:rounded-3xl sm:shadow-2xl">
@@ -165,7 +173,12 @@ export function Simulator() {
             <Logo withText={false} light />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-semibold leading-tight">Asistente Adhera</p>
+            <p className="flex items-center gap-2 font-semibold leading-tight">
+              Asistente Adhera
+              <span className="rounded bg-amber-300 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-amber-950" data-testid="simulator-badge">
+                Simulador
+              </span>
+            </p>
             <p className="text-xs text-petrol-200">
               {phase === 'chat' && !completed ? (busy ? 'escribiendo…' : 'en línea') : 'preafiliación demo'}
             </p>
@@ -188,6 +201,11 @@ export function Simulator() {
             </div>
           )}
         </header>
+
+        <p className="flex items-center justify-center gap-1.5 bg-amber-50 px-3 py-1.5 text-center text-xs text-amber-900" data-testid="demo-notice">
+          <ShieldCheck className="size-3.5 shrink-0" aria-hidden />
+          Demostración: no es WhatsApp real. Usá sólo datos ficticios.
+        </p>
 
         {phase === 'chat' && state && (
           <div className="bg-petrol-800 px-4 pb-2.5 pt-1">

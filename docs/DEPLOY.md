@@ -102,7 +102,7 @@ servicios privados ni `preDeployCommand` (todo eso es pago). No debería pedir t
 ### 4. Verificación
 1. `https://<api>/health` → `{"status":"ok","db":"ok","env":"production",...}`.
 2. `https://<web>/login` → ingresá con `ADMIN_EMAIL` / `ADMIN_PASSWORD`. Las credenciales demo no existen en producción.
-3. `https://<web>/simulador` → completá una conversación ficticia y verificá que aparece en `/solicitudes`.
+3. `https://<web>/demo` (sin iniciar sesión) → completá una conversación ficticia y verificá que aparece en `/solicitudes`.
 
 ### 5. WhatsApp
 Seguí `docs/WHATSAPP.md`. Al final: cargar las 3 variables de Meta, `WHATSAPP_ENABLED=true`, redeploy de la API
@@ -111,7 +111,14 @@ y configurar el webhook en Meta.
 ## Seguridad aplicada
 
 - Dashboard y endpoints administrativos exigen sesión (cookie HttpOnly firmada, Secure en producción, 8 h).
-- Login con límite de intentos fallidos (10 cada 15 min por email+IP). Simulador limitado por IP (`SIMULATOR_STARTS_PER_HOUR`); se puede apagar con `SIMULATOR_ENABLED=false`.
+- Demo pública `/demo` (y `/simulador`): sin login, usa los mismos endpoints `/sessions` y el mismo motor; cada sesión sólo se abre con su propio token.
+- Límites anti-abuso del simulador: conversaciones nuevas por visitante y por hora (`SIMULATOR_STARTS_PER_HOUR`, 30),
+  tope global por hora (`SIMULATOR_STARTS_PER_HOUR_GLOBAL`, 300) y hasta 60 respuestas cada 10 min por conversación.
+  Se puede apagar con `SIMULATOR_ENABLED=false`.
+- IP del visitante: el panel reenvía la IP original a la API con la clave compartida `PROXY_SECRET`
+  (Render la genera en `adhera-api` y `adhera-web` la copia). La API ignora esa IP si la clave no coincide.
+  Sin `PROXY_SECRET`, todos los visitantes comparten un único límite por IP (sigue activo el tope global) y la API lo avisa en el log.
+- Login con límite de intentos fallidos (10 cada 15 min por email+IP del visitante).
 - Webhook: firma `X-Hub-Signature-256` verificada sobre el cuerpo crudo, deduplicación por id de mensaje, límite por contacto, sólo acepta el `WHATSAPP_PHONE_NUMBER_ID` configurado.
 - Cada conversación se identifica por remitente + número receptor; el token del simulador sólo abre su propia sesión.
 - Registros sin contenido personal: sólo conteos, códigos de error e ids internos (ni teléfonos ni respuestas).
@@ -121,5 +128,9 @@ y configurar el webhook en Meta.
 ## Limitaciones conocidas
 
 - Rate limit y mutex en memoria: correctos con **una** instancia de la API (no escalar horizontalmente sin moverlos a un almacenamiento compartido).
+- La IP del visitante la toma el panel de `cf-connecting-ip`: Render recibe todo el tráfico a través de Cloudflare
+  (respuestas con `Server: cloudflare` y `CF-RAY`), que reemplaza ese header con la IP real, así que el visitante no puede imponerla.
+  Si faltara, se usa el último valor de `x-forwarded-for` (lo agrega el proxy, no el visitante); en ese caso varios
+  visitantes podrían compartir límite. El tope global por hora protege la base en cualquier caso.
 - No hay pantalla para cambiar la contraseña del administrador: para rotarla, eliminá el usuario en Neon (SQL Editor) y redeployá con la nueva `ADMIN_PASSWORD`.
 - Antes de usar datos reales: revisión legal de consentimiento, retención, acceso por rol, cifrado y proveedores (ver docs/RFC.md).

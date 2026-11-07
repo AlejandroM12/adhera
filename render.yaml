@@ -50,6 +50,12 @@ services:
         value: "true"
       - key: SIMULATOR_ENABLED
         value: "true"
+      - key: SIMULATOR_STARTS_PER_HOUR # conversaciones nuevas por visitante (IP) y por hora en /demo
+        value: "30"
+      - key: SIMULATOR_STARTS_PER_HOUR_GLOBAL # tope total de conversaciones nuevas por hora
+        value: "300"
+      - key: PROXY_SECRET # clave compartida con el panel para limitar por visitante (la copia adhera-web)
+        generateValue: true
       - key: WHATSAPP_ENABLED
         value: "false" # pasar a "true" cuando estén cargadas las credenciales de Meta
       - key: WHATSAPP_VERIFY_TOKEN
@@ -84,3 +90,8 @@ services:
         value: "false"
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"
+      - key: PROXY_SECRET # misma clave que adhera-api (variable de entorno, no red privada)
+        fromService:
+          type: web
+          name: adhera-api
+          envVarKey: PROXY_SECRET

@@ -21,3 +21,17 @@ test('simulador y panel usables en mobile', async ({ page }) => {
   await page.getByRole('navigation').getByRole('link', { name: 'Entrevistas' }).click();
   await expect(page).toHaveURL(/\/entrevistas/);
 });
+
+test('demo pública en mobile: aviso visible y sin scroll horizontal', async ({ page }) => {
+  await page.goto('/demo');
+  await expect(page.getByTestId('demo-notice')).toBeVisible();
+  await expect(page.getByTestId('simulator-badge')).toBeVisible();
+  await page.getByLabel('Entiendo y acepto usar datos ficticios en esta demo.').check();
+  await page.getByRole('button', { name: 'Comenzar conversación' }).click();
+  await answerText(page, 'Mobile Demo Ficticia');
+  await answerChoice(page, 'Individual');
+  await expectQuestion(page, 'ciudad');
+  await expect(page.getByLabel('Tu respuesta')).toBeInViewport();
+  const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(scrollWidth).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
+});

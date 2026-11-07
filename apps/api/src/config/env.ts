@@ -21,6 +21,10 @@ const EnvSchema = z
     SESSION_SECRET: z.string().min(16, 'SESSION_SECRET debe tener al menos 16 caracteres'),
     /** Conversaciones nuevas del simulador por IP y por hora (anti-abuso). */
     SIMULATOR_STARTS_PER_HOUR: z.coerce.number().int().min(1).default(30),
+    /** Tope global de conversaciones nuevas por hora (protege la base aunque cambien las IPs). */
+    SIMULATOR_STARTS_PER_HOUR_GLOBAL: z.coerce.number().int().min(1).default(300),
+    /** Clave compartida con el panel para confiar en la IP del interesado que reenvía (x-adhera-client-ip). */
+    PROXY_SECRET: z.string().min(32, 'PROXY_SECRET debe tener al menos 32 caracteres').optional().or(z.literal('').transform(() => undefined)),
     /** Habilita POST /sessions (simulador web público). */
     SIMULATOR_ENABLED: z
       .string()

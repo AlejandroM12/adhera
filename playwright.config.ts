@@ -35,6 +35,8 @@ export default defineConfig({
         DIRECT_URL: E2E.dbUrl,
         WEB_ORIGIN: `http://localhost:${E2E.webPort}`,
         SIMULATOR_STARTS_PER_HOUR: '1000',
+        SIMULATOR_STARTS_PER_HOUR_GLOBAL: '1000',
+        PROXY_SECRET: E2E.proxySecret,
         ...E2E.whatsapp,
       },
     },
@@ -44,7 +46,7 @@ export default defineConfig({
       url: `http://localhost:${E2E.webPort}/login`,
       reuseExistingServer: false,
       timeout: 90_000,
-      env: { NEXT_DIST_DIR: '.next-e2e', API_URL: `http://localhost:${E2E.apiPort}` },
+      env: { NEXT_DIST_DIR: '.next-e2e', API_URL: `http://localhost:${E2E.apiPort}`, PROXY_SECRET: E2E.proxySecret },
     },
   ],
 });
