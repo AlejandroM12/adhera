@@ -9,11 +9,11 @@ export const STATUS_LABEL: Record<ApplicationStatus, string> = {
 };
 
 export const STATUS_STYLE: Record<ApplicationStatus, string> = {
-  IN_PROGRESS: 'bg-slate-100 text-slate-700 ring-slate-300',
-  PENDING_REVIEW: 'bg-amber-50 text-amber-800 ring-amber-300',
-  CONTACTED: 'bg-sky-50 text-sky-800 ring-sky-300',
-  INTERVIEW_SCHEDULED: 'bg-turq-50 text-turq-700 ring-turq-300',
-  CLOSED: 'bg-zinc-100 text-zinc-600 ring-zinc-300',
+  IN_PROGRESS: 'bg-slate-50 text-slate-700 ring-slate-200',
+  PENDING_REVIEW: 'bg-amber-50 text-amber-900 ring-amber-200',
+  CONTACTED: 'bg-brand-50 text-brand-800 ring-brand-200',
+  INTERVIEW_SCHEDULED: 'bg-petrol-50 text-petrol-800 ring-petrol-200',
+  CLOSED: 'bg-slate-100 text-slate-600 ring-slate-200',
 };
 
 export const STATUSES = Object.keys(STATUS_LABEL) as ApplicationStatus[];
@@ -27,7 +27,7 @@ export const SEGMENT_LABEL: Record<Segment, string> = {
   abandoned: 'Abandonadas',
 };
 
-export const ABANDONED_STYLE = 'bg-rose-50 text-rose-700 ring-rose-200';
+export const ABANDONED_STYLE = 'bg-rose-50 text-rose-800 ring-rose-200';
 
 export const CHANNEL_LABEL = { SIMULATOR: 'Simulador', WHATSAPP: 'WhatsApp' } as const;
 
@@ -47,9 +47,9 @@ export const INTERVIEW_LABEL: Record<InterviewStatus, string> = {
 };
 
 export const INTERVIEW_STYLE: Record<InterviewStatus, string> = {
-  SCHEDULED: 'bg-turq-50 text-turq-700 ring-turq-300',
-  COMPLETED: 'bg-petrol-50 text-petrol-700 ring-petrol-200',
-  CANCELLED: 'bg-rose-50 text-rose-700 ring-rose-200',
+  SCHEDULED: 'bg-petrol-50 text-petrol-800 ring-petrol-200',
+  COMPLETED: 'bg-brand-50 text-brand-800 ring-brand-200',
+  CANCELLED: 'bg-slate-100 text-slate-600 ring-slate-200',
 };
 
 export const QUESTION_TYPE_LABEL = {
@@ -58,7 +58,15 @@ export const QUESTION_TYPE_LABEL = {
   number: 'Número',
   yes_no: 'Sí / No',
   date: 'Fecha',
+  multi_choice: 'Opción múltiple',
+  dni: 'DNI',
+  phone: 'Teléfono',
+  email: 'Correo',
+  locality: 'Localidad (catálogo)',
 } as const;
+
+/** Tipos que el administrador puede elegir al crear una pregunta; el resto los define una plantilla. */
+export const EDITABLE_QUESTION_TYPES = ['text', 'single_choice', 'number', 'yes_no', 'date'] as const;
 
 /** Descripción legible de un evento de actividad (sin exponer contenido de respuestas). */
 export function describeEvent(e: ActivityEvent): string {
@@ -77,7 +85,13 @@ export function describeEvent(e: ActivityEvent): string {
     case 'ASSIGNED':
       return p.assignedUserId ? 'Asignó un asesor responsable' : 'Quitó la asignación';
     case 'NOTE_ADDED':
-      return 'Agregó una nota interna';
+      return p.kind === 'CLARIFICATION' ? 'Marcó una aclaración pendiente' : p.kind === 'OBSERVATION' ? 'Agregó una observación' : 'Agregó una nota interna';
+    case 'CLARIFICATION_RESOLVED':
+      return 'Resolvió una aclaración';
+    case 'ANSWER_CORRECTED':
+      return `Corrigió «${(p.questionLabel as string | undefined) ?? p.questionKey}»`;
+    case 'PDF_EXPORTED':
+      return 'Descargó la ficha en PDF';
     case 'INTERVIEW_SCHEDULED':
       return 'Programó una entrevista';
     case 'INTERVIEW_UPDATED':
@@ -87,7 +101,7 @@ export function describeEvent(e: ActivityEvent): string {
     case 'INTERVIEW_CANCELLED':
       return 'Canceló una entrevista';
     default:
-      return e.kind;
+      return 'Actualizó la solicitud';
   }
 }
 

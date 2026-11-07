@@ -1,6 +1,8 @@
 export type ApplicationStatus = 'IN_PROGRESS' | 'PENDING_REVIEW' | 'CONTACTED' | 'INTERVIEW_SCHEDULED' | 'CLOSED';
 export type InterviewStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
-export type QuestionType = 'text' | 'single_choice' | 'number' | 'yes_no' | 'date';
+export type QuestionType =
+  | 'text' | 'single_choice' | 'number' | 'yes_no' | 'date'
+  | 'multi_choice' | 'dni' | 'phone' | 'email' | 'locality';
 
 export interface UserRef {
   id: string;
@@ -13,24 +15,63 @@ export interface Advisor extends UserRef {
 export interface ChoiceOption {
   value: string;
   label: string;
+  exclusive?: boolean;
+}
+
+export interface MemberRef {
+  id: string;
+  name: string;
+  titular: boolean;
 }
 
 export interface PublicQuestion {
+  /** Paso: `clave` o `clave#integrante`. */
   key: string;
+  questionKey?: string;
   label: string;
   type: QuestionType;
   required: boolean;
   options?: ChoiceOption[];
+  section?: string;
+  help?: string;
+  placeholder?: string;
+  allowUnknown?: boolean;
+  allowPreferNot?: boolean;
+  otherLabel?: string;
+  role?: 'review' | 'consent';
+  member?: MemberRef;
+  /** Localidad: provincia elegida (para el autocompletado). */
+  provinceId?: string;
+}
+
+/** Valor enviado al responder. */
+export type AnswerInput =
+  | string | number | boolean | null | string[]
+  | { special: 'unknown' | 'prefer_not' }
+  | { other: string }
+  | { values: string[]; other?: string }
+  | { localityId: string };
+
+export interface TranscriptItem {
+  key: string;
+  label: string;
+  answer: string;
+  section?: string;
+  member?: MemberRef;
+  editable?: boolean;
+  question?: PublicQuestion;
 }
 
 export interface SessionState {
   sessionId: string;
   status: 'IN_PROGRESS' | 'COMPLETED';
-  questionnaire: { name: string; version: number };
+  questionnaire: { name: string; version: number; title?: string | null };
   progress: { answered: number; total: number };
   nextQuestion: PublicQuestion | null;
+  pendingConfirmation?: { key: string; message: string; options: string[]; correction: boolean } | null;
   canComplete: boolean;
-  transcript: { key: string; label: string; answer: string }[];
+  canCorrect?: boolean;
+  transcript: TranscriptItem[];
   startedAt: string;
   completedAt: string | null;
   resumeToken?: string;
@@ -84,11 +125,65 @@ export interface Paginated<T> {
   items: T[];
 }
 
+export type NoteKind = 'NOTE' | 'OBSERVATION' | 'CLARIFICATION';
+
 export interface Note {
   id: string;
   content: string;
   createdAt: string;
   author: UserRef;
+  kind?: NoteKind;
+  /** Paso al que se refiere la observación (`clave` o `clave#integrante`). */
+  questionKey?: string | null;
+  resolvedAt?: string | null;
+}
+
+export interface DossierItem {
+  stepId: string;
+  key: string;
+  label: string;
+  question: string;
+  answer: string;
+  original: string | null;
+  status: 'answered' | 'unknown' | 'prefer_not' | 'skipped' | 'to_verify';
+  confirmed: { message: string; chosen: string } | null;
+  corrections: { previous: string; previousOriginal: string | null; at: string }[];
+  observations: Note[];
+  answeredAt: string;
+}
+
+export interface DossierSection {
+  title: string;
+  items: DossierItem[];
+}
+
+export interface DossierMember {
+  id: string;
+  titular: boolean;
+  name: string;
+  relation: string | null;
+  dni: string | null;
+  birthDate: string | null;
+  age: number | null;
+  data: DossierItem[];
+  health: DossierSection[];
+}
+
+export interface ReviewFlag {
+  stepId: string | null;
+  memberId: string | null;
+  section: string | null;
+  label: string;
+  detail: string;
+}
+
+export interface Dossier {
+  templateKey: string | null;
+  title: string | null;
+  general: DossierSection[];
+  members: DossierMember[];
+  review: { missing: ReviewFlag[]; contradictions: ReviewFlag[]; clarifications: ReviewFlag[] };
+  counts: { answered: number; missing: number; toVerify: number };
 }
 
 export interface Interview {
@@ -119,8 +214,13 @@ export interface ApplicationDetail {
     status: string;
     startedAt: string;
     completedAt: string | null;
-    questionnaire: { name: string; version: number };
+    questionnaire: { name: string; version: number; title?: string | null; templateKey?: string | null };
+    reviewConfirmedAt?: string | null;
+    consentAt?: string | null;
+    consentVersion?: string | null;
   } | null;
+  /** Ficha por secciones e integrantes (preentrevista v2). */
+  dossier?: Dossier | null;
   answers: {
     questionKey: string;
     label: string;
@@ -181,6 +281,9 @@ export interface QuestionCondition {
   equals?: string | number | boolean;
   notEquals?: string | number | boolean;
   in?: Array<string | number | boolean>;
+  includes?: string;
+  excludes?: string;
+  answered?: boolean;
 }
 
 export interface EditableQuestion {
@@ -191,13 +294,17 @@ export interface EditableQuestion {
   required: boolean;
   options?: ChoiceOption[] | null;
   condition?: QuestionCondition | null;
-  validation?: Record<string, number | boolean> | null;
+  validation?: Record<string, number | boolean | string> | null;
+  /** Configuración de plantilla (secciones, repetición por integrante, catálogos): se conserva tal cual. */
+  meta?: Record<string, unknown> | null;
 }
 
 export interface QuestionnaireVersion {
   id: string;
   version: number;
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  title?: string | null;
+  templateKey?: string | null;
   publishedAt: string | null;
   createdAt: string;
   sessionCount: number;

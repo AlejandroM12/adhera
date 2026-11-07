@@ -5,9 +5,14 @@
  */
 export interface InboundMessage {
   sessionId: string;
+  /** Paso respondido (`clave` o `clave#integrante`). */
   questionKey: string;
   value: unknown;
   requestId: string;
+  /** Elección ante una respuesta ambigua (índice de la opción) o 'reject' para volver a escribir. */
+  confirm?: number | 'reject';
+  /** Corrección de una respuesta anterior (antes de confirmar la revisión final). */
+  correction?: boolean;
 }
 
 export interface OutboundQuestion {
@@ -16,6 +21,9 @@ export interface OutboundQuestion {
   type: string;
   required: boolean;
   options?: { value: string; label: string }[];
+  allowUnknown?: boolean;
+  allowPreferNot?: boolean;
+  otherLabel?: string;
 }
 
 export interface OutboundMessage {

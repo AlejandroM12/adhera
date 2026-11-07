@@ -38,11 +38,11 @@ export default function DashboardPage() {
     <>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
             {greeting()}{firstName ? `, ${firstName}` : ''}
           </h1>
-          <p className="mt-1 text-sm text-slate-500 first-letter:uppercase">
-            {formatDay(new Date())} · Indicadores calculados en tiempo real desde la base.
+          <p className="mt-1 text-sm text-slate-600 first-letter:uppercase">
+            {formatDay(new Date())}
           </p>
         </div>
         <div className="flex flex-wrap gap-2" aria-label="Acciones rápidas">
@@ -72,7 +72,7 @@ export default function DashboardPage() {
               testId="kpi-newThisWeek"
               hint={
                 k && (
-                  <span className={cn(delta > 0 && 'text-turq-700', delta < 0 && 'text-rose-700')}>
+                  <span className={cn(delta > 0 && 'text-petrol-700', delta < 0 && 'text-rose-700')}>
                     {delta > 0 ? `+${delta}` : delta} vs. semana anterior
                   </span>
                 )
@@ -116,13 +116,13 @@ export default function DashboardPage() {
             />
           </div>
 
-          <div className="mt-5 grid gap-4 lg:grid-cols-3">
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
             <SectionCard
               className="lg:col-span-2"
               title="Para revisar"
               description="Solicitudes enviadas y pedidos de asesor que esperan el primer contacto."
               action={
-                <Link href="/solicitudes?status=PENDING_REVIEW" className="text-sm font-medium text-petrol-700 hover:underline">
+                <Link href="/solicitudes?status=PENDING_REVIEW" className="text-sm font-medium text-brand-700 underline-offset-2 hover:underline">
                   Ver todas
                 </Link>
               }
@@ -135,7 +135,7 @@ export default function DashboardPage() {
               ) : (
                 <ul className="flex flex-col" data-testid="to-review">
                   {d.toReview.map((a) => (
-                    <li key={a.id} className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-slate-50">
+                    <li key={a.id} className="flex items-center gap-3 rounded-md px-3 py-2.5 hover:bg-slate-50">
                       <Avatar name={a.displayName} size="sm" />
                       <Link href={`/solicitudes/${a.id}`} className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-slate-900">{a.displayName}</span>
@@ -168,7 +168,7 @@ export default function DashboardPage() {
             <SectionCard
               title="Próximas entrevistas"
               action={
-                <Link href="/entrevistas" className="text-sm font-medium text-petrol-700 hover:underline">
+                <Link href="/entrevistas" className="text-sm font-medium text-brand-700 underline-offset-2 hover:underline">
                   Agenda
                 </Link>
               }
@@ -182,8 +182,8 @@ export default function DashboardPage() {
                 <ul className="flex flex-col" data-testid="upcoming-interviews">
                   {d.upcomingInterviews.map((i) => (
                     <li key={i.id}>
-                      <Link href={`/solicitudes/${i.application?.id}`} className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-slate-50">
-                        <span className="flex w-14 shrink-0 flex-col items-center rounded-lg bg-petrol-50 py-1 text-petrol-800">
+                      <Link href={`/solicitudes/${i.application?.id}`} className="flex items-center gap-3 rounded-md px-3 py-2 hover:bg-slate-50">
+                        <span className="flex w-14 shrink-0 flex-col items-center rounded-md bg-brand-50 py-1 text-brand-800">
                           <span className="text-[10px] font-medium uppercase">{formatDay(i.scheduledAt).slice(0, 3)}</span>
                           <span className="text-sm font-semibold tabular-nums">{formatTime(i.scheduledAt)}</span>
                         </span>
@@ -220,7 +220,7 @@ export default function DashboardPage() {
                           </span>
                         </div>
                         <div className="mt-1 h-2 rounded-full bg-slate-100">
-                          <div className="h-2 rounded-full bg-gradient-to-r from-petrol-600 to-turq-500" style={{ width: `${(f.count / top) * 100}%` }} />
+                          <div className="h-2 rounded-full bg-petrol-500" style={{ width: `${(f.count / top) * 100}%` }} />
                         </div>
                       </li>
                     );
@@ -233,7 +233,7 @@ export default function DashboardPage() {
               title="Para recuperar"
               description="Conversaciones abandonadas con datos de contacto."
               action={
-                <Link href="/solicitudes?view=abandoned" className="text-sm font-medium text-petrol-700 hover:underline">
+                <Link href="/solicitudes?view=abandoned" className="text-sm font-medium text-brand-700 underline-offset-2 hover:underline">
                   Ver todas
                 </Link>
               }
@@ -247,15 +247,15 @@ export default function DashboardPage() {
                 <ul className="flex flex-col" data-testid="abandoned">
                   {d.abandoned.map((a) => (
                     <li key={a.id}>
-                      <Link href={`/solicitudes/${a.id}`} className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-slate-50">
-                        <PhoneCall className="size-4 shrink-0 text-rose-500" />
+                      <Link href={`/solicitudes/${a.id}`} className="flex items-center gap-3 rounded-md px-3 py-2 hover:bg-slate-50">
+                        <PhoneCall className="size-4 shrink-0 text-slate-500" aria-hidden />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium text-slate-900">{a.displayName}</span>
                           <span className="block text-xs text-slate-500">
                             {a.answerCount} respuesta{a.answerCount === 1 ? '' : 's'} · sin actividad {timeAgo(a.lastActivityAt)}
                           </span>
                         </span>
-                        <ChevronRight className="size-4 text-slate-400" />
+                        <ChevronRight className="size-4 text-slate-400" aria-hidden />
                       </Link>
                     </li>
                   ))}
@@ -292,5 +292,5 @@ function ListSkeleton() {
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="px-3 py-6 text-center text-sm text-slate-500">{text}</p>;
+  return <p className="px-3 py-6 text-center text-sm text-slate-600">{text}</p>;
 }

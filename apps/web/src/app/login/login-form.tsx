@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { MessageCircle } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { api, errorMessage } from '@/lib/api';
-import { Button, Card, Field, InlineError, Input } from '@/components/ui';
+import { Button, Field, InlineError, Input } from '@/components/ui';
 import { Logo } from '@/components/logo';
 
 // Las credenciales demo sólo se muestran en desarrollo o si se habilita explícitamente.
@@ -34,34 +34,40 @@ export function LoginForm() {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-petrol-900 via-petrol-800 to-petrol-700 p-4">
+    <main className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
-        <div className="mb-6 flex justify-center">
-          <Logo light />
-        </div>
-        <Card className="p-6">
-          <h1 className="text-xl font-semibold text-slate-900">Ingreso de asesores</h1>
-          <p className="mt-1 text-sm text-slate-500">Accedé al panel de solicitudes.</p>
-          <form onSubmit={onSubmit} className="mt-5 flex flex-col gap-4">
-            <Field label="Email" htmlFor="email">
-              <Input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </Field>
-            <Field label="Contraseña" htmlFor="password">
-              <Input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-            </Field>
-            <InlineError message={error} />
-            <Button type="submit" loading={busy} className="w-full">
-              Ingresar
-            </Button>
-          </form>
-          {SHOW_DEMO && (
-            <p className="mt-4 rounded-lg bg-petrol-50 px-3 py-2 text-xs text-petrol-800">
-              Demo local: <strong>asesor@adhera.demo</strong> / <strong>adhera-demo</strong> (credenciales ficticias).
-            </p>
-          )}
-        </Card>
-        <Link href="/simulador" className="mt-4 flex items-center justify-center gap-2 text-sm text-petrol-100 hover:text-white">
-          <MessageCircle className="size-4" /> Probar el simulador del interesado
+        <Logo className="mb-8" />
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Ingresá al panel</h1>
+        <p className="mt-1 text-sm text-slate-600">Gestión de solicitudes y entrevistas para asesores.</p>
+        <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4" noValidate={false}>
+          <Field label="Email" htmlFor="email">
+            <Input id="email" type="email" autoComplete="username" className="h-10" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </Field>
+          <Field label="Contraseña" htmlFor="password">
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              className="h-10"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              aria-invalid={error ? true : undefined}
+              required
+            />
+          </Field>
+          <InlineError message={error} />
+          <Button type="submit" loading={busy} className="h-10 w-full">
+            Ingresar
+          </Button>
+        </form>
+        {SHOW_DEMO && (
+          <p className="mt-5 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+            Demo local: <strong className="font-semibold text-slate-800">asesor@adhera.demo</strong> /{' '}
+            <strong className="font-semibold text-slate-800">adhera-demo</strong> (credenciales ficticias).
+          </p>
+        )}
+        <Link href="/simulador" className="mt-8 inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:underline">
+          Ver el cuestionario como interesado <ArrowRight className="size-4" aria-hidden />
         </Link>
       </div>
     </main>

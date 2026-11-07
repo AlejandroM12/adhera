@@ -91,7 +91,7 @@ export function ApplicationsList() {
         description="Seguimiento de interesados desde la conversación hasta la entrevista."
         actions={
           <Link href="/simulador" target="_blank" className={buttonVariants({ variant: 'outline' })}>
-            <MessageCircle /> Nueva desde simulador
+            <MessageCircle /> Abrir simulador
           </Link>
         }
       />
@@ -106,17 +106,17 @@ export function ApplicationsList() {
           { value: 'all', label: 'Todas', count: seg?.all },
         ]}
       />
-      <p className="mt-3 flex items-start gap-1.5 text-xs text-slate-500">
-        <Info className="mt-px size-3.5 shrink-0" /> {VIEW_HELP[view]}
+      <p className="mt-3 flex items-start gap-1.5 text-xs text-slate-600">
+        <Info className="mt-px size-3.5 shrink-0" aria-hidden /> {VIEW_HELP[view]}
       </p>
 
-      <Card className="mb-4 mt-3 flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
+      <div role="search" className="mb-4 mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-          <Input aria-label="Buscar por nombre" placeholder="Buscar por nombre…" className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" aria-hidden />
+          <Input aria-label="Buscar por nombre" type="search" placeholder="Buscar por nombre…" className="h-10 pl-9 sm:h-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         {(view === 'submitted' || view === 'all') && (
-          <Select aria-label="Filtrar por estado" value={status} onChange={(e) => setParam({ status: e.target.value })} className="sm:w-52">
+          <Select aria-label="Filtrar por estado" value={status} onChange={(e) => setParam({ status: e.target.value })} className="h-10 sm:h-9 sm:w-52">
             <option value="">Todos los estados</option>
             {SUBMITTED_STATUSES.map((s) => (
               <option key={s} value={s}>
@@ -125,7 +125,7 @@ export function ApplicationsList() {
             ))}
           </Select>
         )}
-        <Select aria-label="Filtrar por asesor" value={advisor} onChange={(e) => setParam({ advisor: e.target.value })} className="sm:w-48">
+        <Select aria-label="Filtrar por asesor" value={advisor} onChange={(e) => setParam({ advisor: e.target.value })} className="h-10 sm:h-9 sm:w-48">
           <option value="">Todos los asesores</option>
           <option value="none">Sin asignar</option>
           {advisors.data?.map((a) => (
@@ -143,10 +143,10 @@ export function ApplicationsList() {
               setParam({ status: '', advisor: '', q: '' });
             }}
           >
-            <X /> Limpiar
+            <X /> Limpiar filtros
           </Button>
         )}
-      </Card>
+      </div>
 
       {q.isError ? (
         <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />
@@ -162,22 +162,22 @@ export function ApplicationsList() {
           {/* Tabla desktop */}
           <Card className="hidden overflow-hidden md:block">
             <table className="w-full text-sm" data-testid="applications-table">
-              <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+              <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs text-slate-600">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Interesado</th>
-                  <th className="px-4 py-3 font-medium">{view === 'submitted' ? 'Enviada' : 'Actividad'}</th>
-                  <th className="px-4 py-3 font-medium">Estado</th>
-                  <th className="px-4 py-3 font-medium">Asesor</th>
+                  <th scope="col" className="px-4 py-2.5 font-medium">Interesado</th>
+                  <th scope="col" className="px-4 py-2.5 font-medium">{view === 'submitted' ? 'Enviada' : 'Actividad'}</th>
+                  <th scope="col" className="px-4 py-2.5 font-medium">Estado</th>
+                  <th scope="col" className="px-4 py-2.5 font-medium">Asesor</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {q.data.items.map((a) => (
-                  <tr key={a.id} className="cursor-pointer hover:bg-petrol-50/50" onClick={() => router.push(`/solicitudes/${a.id}`)}>
+                  <tr key={a.id} className="cursor-pointer hover:bg-slate-50" onClick={() => router.push(`/solicitudes/${a.id}`)}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <Avatar name={a.displayName} size="sm" />
                         <div className="min-w-0">
-                          <Link href={`/solicitudes/${a.id}`} className="font-medium text-slate-900 hover:text-petrol-700" onClick={(e) => e.stopPropagation()}>
+                          <Link href={`/solicitudes/${a.id}`} className="font-medium text-slate-900 hover:text-brand-700" onClick={(e) => e.stopPropagation()}>
                             {a.displayName}
                           </Link>
                           <span className="mt-0.5 flex flex-wrap items-center gap-1">
@@ -194,7 +194,7 @@ export function ApplicationsList() {
                     <td className="px-4 py-3">
                       <StatusBadge status={a.status} segment={a.segment} />
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{a.assignedUser?.displayName ?? <span className="text-slate-400">Sin asignar</span>}</td>
+                    <td className="px-4 py-3 text-slate-700">{a.assignedUser?.displayName ?? <span className="text-slate-500">Sin asignar</span>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -204,8 +204,8 @@ export function ApplicationsList() {
           {/* Tarjetas mobile */}
           <div className="flex flex-col gap-2 md:hidden">
             {q.data.items.map((a) => (
-              <Link key={a.id} href={`/solicitudes/${a.id}`}>
-                <Card className="flex gap-3 p-4">
+              <Link key={a.id} href={`/solicitudes/${a.id}`} className="rounded-lg">
+                <Card className="flex gap-3 p-4 hover:border-slate-300">
                   <Avatar name={a.displayName} size="sm" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
@@ -217,7 +217,7 @@ export function ApplicationsList() {
                       <HandoffTag at={a.handoffRequestedAt} />
                       <Highlights items={a.highlights} />
                     </span>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-slate-600">
                       {a.completedAt ? `Enviada ${timeAgo(a.completedAt)}` : `Última actividad ${timeAgo(a.lastActivityAt)}`} ·{' '}
                       {a.assignedUser?.displayName ?? 'Sin asignar'}
                     </p>
@@ -228,7 +228,7 @@ export function ApplicationsList() {
           </div>
 
           {pages > 1 && (
-            <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
+            <nav aria-label="Paginación" className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600">
               <span>
                 Página {page} de {pages} · {q.data.total} resultados
               </span>
@@ -240,7 +240,7 @@ export function ApplicationsList() {
                   Siguiente <ChevronRight />
                 </Button>
               </div>
-            </div>
+            </nav>
           )}
         </>
       )}
@@ -253,7 +253,7 @@ function ActivityCell({ a }: { a: ApplicationListItem }) {
     return (
       <>
         {formatDateTime(a.completedAt)}
-        <p className="text-xs text-slate-400">{timeAgo(a.completedAt)}</p>
+        <p className="text-xs text-slate-500">{timeAgo(a.completedAt)}</p>
       </>
     );
   }
@@ -262,7 +262,7 @@ function ActivityCell({ a }: { a: ApplicationListItem }) {
       <span className={a.segment === 'abandoned' ? 'text-rose-700' : 'text-slate-700'}>
         {a.segment === 'abandoned' ? 'Sin actividad' : 'Respondiendo'} · {timeAgo(a.lastActivityAt)}
       </span>
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-slate-500">
         {a.answerCount} respuesta{a.answerCount === 1 ? '' : 's'} · sin enviar
       </p>
     </>

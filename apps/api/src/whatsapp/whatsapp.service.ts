@@ -8,7 +8,8 @@ import { SessionsService } from '../sessions/sessions.service';
 import { WhatsAppCloudAdapter } from './whatsapp.adapter';
 import { CONSENT_NO, CONSENT_YES, MSG } from './messages';
 import {
-  buttonsMessage, extractEvents, NormalizedInbound, parseCommand, questionMessage, resolveAnswer, textMessage,
+  buttonsMessage, confirmationMessage, extractEvents, NormalizedInbound, parseCommand, questionMessage, resolveAnswer,
+  resolveConfirmation, textMessage,
 } from './payloads';
 
 type State = Awaited<ReturnType<SessionsService['buildState']>>;
@@ -106,6 +107,12 @@ export class WhatsAppService {
   }
 
   private async sendQuestion(contact: ChannelContact, state: State) {
+    if (state.pendingConfirmation) {
+      await this.adapter.sendToContact(
+        contact, confirmationMessage(contact.externalUserId, state.pendingConfirmation), 'confirmation', state.sessionId,
+      );
+      return;
+    }
     if (!state.nextQuestion) return;
     await this.adapter.sendToContact(
       contact,
@@ -218,6 +225,22 @@ export class WhatsAppService {
       return;
     }
 
+    // Respuesta ambigua pendiente: el interesado elige una opción numerada.
+    if (state.pendingConfirmation) {
+      const choice = resolveConfirmation(state.pendingConfirmation.options, { replyId: m.replyId, text: m.text });
+      if (choice === null) {
+        await this.sendQuestion(contact, state);
+        return;
+      }
+      await this.adapter.receiveMessage(
+        this.adapter.normalizeInbound(session.id, { message: m, questionKey: state.pendingConfirmation.key, value: null, confirm: choice }),
+      );
+      const after = await this.sessions.buildState(session.id);
+      if (after.canComplete) await this.finish(contact, session.id);
+      else await this.sendQuestion(contact, after);
+      return;
+    }
+
     let value: unknown;
     if (command === 'skip') {
       if (question.required) {
@@ -256,7 +279,7 @@ export class WhatsAppService {
       contact = await this.prisma.channelContact.update({ where: { id: contact.id }, data: { invalidStreak: 0 } });
     }
     const next = await this.sessions.buildState(session.id);
-    if (next.canComplete) await this.finish(contact, session.id);
+    if (next.canComplete && !next.pendingConfirmation) await this.finish(contact, session.id);
     else await this.sendQuestion(contact, next);
   }
 

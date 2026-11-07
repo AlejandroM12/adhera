@@ -211,3 +211,28 @@ describe('configuración por entorno', () => {
     expect(ok.WHATSAPP_GRAPH_VERSION).toMatch(/^v\d+\.\d+$/);
   });
 });
+
+describe('WhatsApp con la preentrevista v2 (compatibilidad, sin activar)', () => {
+  it('selección múltiple como lista numerada y opciones "No sé"/"Otro" como texto', async () => {
+    const { questionMessage } = await import('./payloads');
+    const m = questionMessage('549', {
+      key: 'h_treatments#m0', label: '¿Hacés algún tratamiento?', type: 'multi_choice', required: true,
+      options: [{ value: 'none', label: 'Ninguno' }, { value: 'psy', label: 'Psicoterapia' }], allowUnknown: true,
+    }) as { type: string; text: { body: string } };
+    expect(m.type).toBe('text');
+    expect(m.text.body).toContain('1. Ninguno');
+    expect(m.text.body).toContain('separados por coma');
+    expect(m.text.body).toContain('NO SÉ');
+  });
+
+  it('confirmación de respuestas ambiguas con números (0 = escribir de nuevo)', async () => {
+    const { confirmationMessage, resolveConfirmation } = await import('./payloads');
+    const opts = ['Río Cuarto', 'Río Tercero'];
+    const msg = confirmationMessage('549', { message: '¿Cuál?', options: opts }) as { text: { body: string } };
+    expect(msg.text.body).toContain('2. Río Tercero');
+    expect(resolveConfirmation(opts, { text: '2' })).toBe(1);
+    expect(resolveConfirmation(opts, { text: '0' })).toBe('reject');
+    expect(resolveConfirmation(opts, { text: 'río cuarto' })).toBe(0);
+    expect(resolveConfirmation(opts, { text: 'hola' })).toBeNull();
+  });
+});

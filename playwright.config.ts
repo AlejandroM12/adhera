@@ -11,8 +11,10 @@ export default defineConfig({
   reporter: [['list']],
   use: { baseURL: `http://localhost:${E2E.webPort}`, trace: 'retain-on-failure', locale: 'es-AR' },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: /mobile\.spec\.ts/ },
+    { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: /(mobile|v2-.*)\.spec\.ts/ },
     { name: 'mobile', use: { ...devices['Pixel 7'] }, testMatch: /mobile\.spec\.ts/ },
+    // Preentrevista v2: publica la nueva versión, por eso corre después de las pruebas de v1.
+    { name: 'v2', use: { ...devices['Desktop Chrome'] }, testMatch: /v2-.*\.spec\.ts/, dependencies: ['desktop', 'mobile'] },
   ],
   webServer: [
     {

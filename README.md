@@ -58,10 +58,18 @@ Si `pnpm install` falla en Windows con `EPERM ... query_engine-windows.dll.node`
 6. En `/entrevistas` marcala como realizada con el próximo paso.
 7. En `/cuestionarios` creá un borrador, cambiá un texto o una condición, guardá y publicá: las sesiones nuevas usan la versión nueva; las anteriores conservan la suya.
 
+### Preentrevista de salud (v2)
+- Cuestionario por secciones con datos y declaración de salud **de cada integrante**, validaciones (DNI, fechas,
+  teléfono, correo, localidades del catálogo oficial), "No sé" / "Prefiero no responder" / "Otro", confirmación de
+  respuestas ambiguas y revisión final con correcciones. **No es una declaración jurada** ni una evaluación.
+- Ficha profesional del asesor (faltantes, contradicciones explícitas, aclaraciones, observaciones) y PDF A4.
+- Se importa como borrador desde **Cuestionarios**. Detalle y publicación segura: [`docs/PREENTREVISTA.md`](docs/PREENTREVISTA.md).
+  Datos sensibles y retención: [`docs/PRIVACIDAD.md`](docs/PRIVACIDAD.md).
+
 ### Demo pública `/demo`
 - Simulador conversacional para mostrar a interesados, **sin login**, identificado como simulador y con aviso de datos ficticios.
   Usa el mismo componente y los mismos endpoints que `/simulador` (sin enlace al panel). Las solicitudes llegan al panel del asesor.
-- Límites: 30 conversaciones nuevas por visitante y por hora, 300 en total por hora, 60 respuestas cada 10 min por conversación.
+- Límites: 30 conversaciones nuevas por visitante y por hora, 300 en total por hora, 300 respuestas cada 10 min por conversación.
 
 ### WhatsApp y despliegue público
 - **WhatsApp Cloud API:** `WhatsAppCloudAdapter` sobre el mismo motor conversacional (`apps/api/src/whatsapp`). Webhook firmado en `/webhooks/whatsapp`, consentimiento, derivación a asesor, deduplicación, reintentos y estados de entrega. Configuración en [`docs/WHATSAPP.md`](docs/WHATSAPP.md).

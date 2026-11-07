@@ -17,7 +17,7 @@ test('flujo principal: simulador → refresh → finalizar → solicitudes → f
 
   // Validación del motor: número fuera de rango
   await answerText(page, '1');
-  await expect(page.getByTestId('chat').getByRole('alert')).toContainText('El mínimo es 2');
+  await expect(page.getByTestId('composer').getByRole('alert')).toContainText('El mínimo es 2');
   await answerText(page, '4');
   await expectQuestion(page, 'ciudad');
   await expect(page.getByTestId('progress')).toHaveText(/3 de \d+/);

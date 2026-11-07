@@ -108,12 +108,16 @@ servicios privados ni `preDeployCommand` (todo eso es pago). No debería pedir t
 Seguí `docs/WHATSAPP.md`. Al final: cargar las 3 variables de Meta, `WHATSAPP_ENABLED=true`, redeploy de la API
 y configurar el webhook en Meta.
 
+### 6. Preentrevista de salud (v2)
+Seguí "Publicar la v2 de forma segura" en `docs/PREENTREVISTA.md`: probar la migración en una rama de Neon,
+deploy manual de la API y del panel, importar la plantilla como borrador y publicarla.
+
 ## Seguridad aplicada
 
 - Dashboard y endpoints administrativos exigen sesión (cookie HttpOnly firmada, Secure en producción, 8 h).
 - Demo pública `/demo` (y `/simulador`): sin login, usa los mismos endpoints `/sessions` y el mismo motor; cada sesión sólo se abre con su propio token.
 - Límites anti-abuso del simulador: conversaciones nuevas por visitante y por hora (`SIMULATOR_STARTS_PER_HOUR`, 30),
-  tope global por hora (`SIMULATOR_STARTS_PER_HOUR_GLOBAL`, 300) y hasta 60 respuestas cada 10 min por conversación.
+  tope global por hora (`SIMULATOR_STARTS_PER_HOUR_GLOBAL`, 300) y hasta 300 respuestas cada 10 min por conversación (la preentrevista con grupo familiar es larga).
   Se puede apagar con `SIMULATOR_ENABLED=false`.
 - IP del visitante: el panel reenvía la IP original a la API con la clave compartida `PROXY_SECRET`
   (Render la genera en `adhera-api` y `adhera-web` la copia). La API ignora esa IP si la clave no coincide.

@@ -20,7 +20,8 @@ let perIp: RateLimiter | null = null;
 let globalLimiter: RateLimiter | null = null;
 const startsPerIp = () => (perIp ??= new RateLimiter(config().SIMULATOR_STARTS_PER_HOUR, HOUR));
 const startsGlobal = () => (globalLimiter ??= new RateLimiter(config().SIMULATOR_STARTS_PER_HOUR_GLOBAL, HOUR));
-const writesPerSession = new RateLimiter(60, 10 * 60 * 1000);
+// La preentrevista v2 con grupo familiar puede superar las 100 respuestas (más correcciones).
+const writesPerSession = new RateLimiter(300, 10 * 60 * 1000);
 
 const TOO_MANY = 'Demasiadas conversaciones nuevas. Probá más tarde.';
 

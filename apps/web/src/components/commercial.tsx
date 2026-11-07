@@ -8,11 +8,9 @@ import { cn, initials } from '@/lib/utils';
 import { Card, Skeleton } from '@/components/ui';
 
 const AVATAR_TONES = [
+  'bg-brand-100 text-brand-800',
   'bg-petrol-100 text-petrol-800',
-  'bg-turq-100 text-turq-700',
-  'bg-sky-100 text-sky-800',
-  'bg-amber-100 text-amber-800',
-  'bg-violet-100 text-violet-800',
+  'bg-slate-200 text-slate-700',
 ];
 
 /** Avatar con iniciales y un tono estable derivado del nombre. */
@@ -39,25 +37,25 @@ export function StatCard({
   loading?: boolean;
 }) {
   const body = (
-    <Card className={cn('h-full p-4 transition-shadow', href && 'group-hover:shadow-md', tone === 'attention' && 'border-amber-200')}>
+    <Card className={cn('h-full p-4 transition-colors', href && 'group-hover:border-slate-300 group-hover:bg-slate-50/60', tone === 'attention' && 'border-amber-300')}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium text-slate-600">{label}</p>
-        <span className={cn('flex size-8 items-center justify-center rounded-lg', tone === 'attention' ? 'bg-amber-50 text-amber-700' : 'bg-turq-50 text-turq-700')}>
-          <Icon className="size-4" />
+        <p className="text-sm font-medium text-slate-700">{label}</p>
+        <span className={cn('flex size-8 items-center justify-center rounded-lg', tone === 'attention' ? 'bg-amber-50 text-amber-800' : 'bg-slate-100 text-slate-600')}>
+          <Icon className="size-4" aria-hidden />
         </span>
       </div>
       {loading ? (
         <Skeleton className="mt-2 h-9 w-16" />
       ) : (
-        <p className="mt-1 text-3xl font-semibold tabular-nums text-petrol-900" data-testid={testId}>
+        <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight text-brand-900" data-testid={testId}>
           {value}
         </p>
       )}
-      {hint && <div className="mt-1 text-xs text-slate-500">{hint}</div>}
+      {hint && <div className="mt-1 text-xs text-slate-600">{hint}</div>}
     </Card>
   );
   return href ? (
-    <Link href={href} className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turq-400 rounded-xl">
+    <Link href={href} className="group block rounded-lg">
       {body}
     </Link>
   ) : (
@@ -80,8 +78,8 @@ export function SectionCard({
     <Card className={cn('flex flex-col', className)}>
       <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-5">
         <div className="min-w-0">
-          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-          {description && <p className="mt-0.5 text-xs text-slate-500">{description}</p>}
+          <h2 className="text-[15px] font-semibold text-slate-900">{title}</h2>
+          {description && <p className="mt-0.5 text-xs text-slate-600">{description}</p>}
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>
@@ -96,8 +94,8 @@ export function KeyValueGrid({ items, testId }: { items: { key: string; label: s
     <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2" data-testid={testId}>
       {items.map((it) => (
         <div key={it.key} className={cn('min-w-0', it.long && 'sm:col-span-2')} data-testid={`profile-${it.key}`}>
-          <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{it.label}</dt>
-          <dd className={cn('mt-0.5 text-sm text-slate-900', it.long ? 'whitespace-pre-wrap rounded-lg bg-slate-50 px-3 py-2' : 'font-medium')}>
+          <dt className="text-xs font-medium text-slate-600">{it.label}</dt>
+          <dd className={cn('mt-0.5 text-sm text-slate-900', it.long ? 'whitespace-pre-wrap rounded-md bg-slate-50 px-3 py-2' : 'font-medium')}>
             {it.value}
           </dd>
         </div>
@@ -112,7 +110,7 @@ export function Highlights({ items, className }: { items: string[]; className?: 
   return (
     <span className={cn('flex flex-wrap gap-1', className)}>
       {items.map((h) => (
-        <span key={h} className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600">
+        <span key={h} className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-700">
           {h}
         </span>
       ))}
@@ -124,7 +122,7 @@ export function Highlights({ items, className }: { items: string[]; className?: 
 export function ChannelTag({ channel }: { channel: 'SIMULATOR' | 'WHATSAPP' }) {
   if (channel !== 'WHATSAPP') return null;
   return (
-    <span className="inline-flex items-center rounded-md bg-turq-50 px-1.5 py-0.5 text-[11px] font-medium text-turq-700 ring-1 ring-inset ring-turq-200">
+    <span className="inline-flex items-center rounded bg-petrol-50 px-1.5 py-0.5 text-[11px] font-medium text-petrol-800 ring-1 ring-inset ring-petrol-200">
       WhatsApp
     </span>
   );
@@ -134,7 +132,7 @@ export function ChannelTag({ channel }: { channel: 'SIMULATOR' | 'WHATSAPP' }) {
 export function HandoffTag({ at }: { at: string | null | undefined }) {
   if (!at) return null;
   return (
-    <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-800 ring-1 ring-inset ring-amber-300">
+    <span className="inline-flex items-center rounded bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-900 ring-1 ring-inset ring-amber-300">
       Pidió asesor
     </span>
   );

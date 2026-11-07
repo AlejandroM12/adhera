@@ -1,29 +1,40 @@
 @import 'tailwindcss';
 
-/* Paleta Adhera: azul petróleo, turquesa y neutros de alto contraste. */
+/*
+ * Design system de Adhera (ver docs/DESIGN.md).
+ * - brand:  azul profundo. Marca, navegación, acción principal, títulos.
+ * - petrol: verde petróleo. Acento: estado activo, progreso, confirmaciones.
+ * - slate:  neutros de texto, bordes y fondos.
+ * - amber / rose / sky: sólo para estados (atención, error, información), en tonos suaves.
+ */
 @theme {
-  --color-petrol-50: #eef7f8;
-  --color-petrol-100: #d5eaee;
-  --color-petrol-200: #aed6de;
-  --color-petrol-300: #7cb9c6;
-  --color-petrol-400: #4795a7;
-  --color-petrol-500: #2c788c;
-  --color-petrol-600: #1f6073;
-  --color-petrol-700: #1a4e5e;
-  --color-petrol-800: #17404d;
-  --color-petrol-900: #123440;
-  --color-petrol-950: #0a222b;
+  --color-brand-50: #f1f5fa;
+  --color-brand-100: #dfe7f2;
+  --color-brand-200: #bfcfe5;
+  --color-brand-300: #93aed3;
+  --color-brand-400: #6285bb;
+  --color-brand-500: #4266a1;
+  --color-brand-600: #2f4f86;
+  --color-brand-700: #253f6d;
+  --color-brand-800: #1d3257;
+  --color-brand-900: #162744;
+  --color-brand-950: #0d182c;
 
-  --color-turq-50: #effcf9;
-  --color-turq-100: #c9f6ec;
-  --color-turq-200: #93ecda;
-  --color-turq-300: #57dac4;
-  --color-turq-400: #27c0aa;
-  --color-turq-500: #0fa391;
-  --color-turq-600: #0a8377;
-  --color-turq-700: #0d6961;
+  --color-petrol-50: #eef7f5;
+  --color-petrol-100: #d4ece7;
+  --color-petrol-200: #a9d8cf;
+  --color-petrol-300: #76bdb0;
+  --color-petrol-400: #489e90;
+  --color-petrol-500: #2d8275;
+  --color-petrol-600: #216a60;
+  --color-petrol-700: #1c564f;
+  --color-petrol-800: #194642;
+  --color-petrol-900: #163b38;
+  --color-petrol-950: #0a2321;
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --color-canvas: #f5f7fa;
+
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
 }
 
 :root {
@@ -31,24 +42,30 @@
 }
 
 body {
-  background: var(--color-slate-50);
+  background: var(--color-canvas);
   color: var(--color-slate-900);
   -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'tnum' 0;
 }
 
-/* Fondo sutil del chat (patrón propio, sin imágenes externas). */
+/* Foco visible y consistente (teclado). Los campos de formulario usan su propio anillo. */
+:where(a, button, summary, [tabindex]:not(input, select, textarea)):focus-visible {
+  outline: 2px solid var(--color-petrol-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Fondo del chat: neutro y liso. */
 .chat-bg {
-  background-color: #e9f1f2;
-  background-image: radial-gradient(rgba(26, 78, 94, 0.07) 1px, transparent 1px);
-  background-size: 18px 18px;
+  background-color: #eef2f6;
 }
 
 @keyframes msg-in {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 .msg-in {
-  animation: msg-in 180ms ease-out;
+  animation: msg-in 160ms ease-out;
 }
 
 @keyframes typing {
@@ -57,4 +74,9 @@ body {
 }
 .typing-dot {
   animation: typing 1.2s infinite ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .msg-in, .typing-dot { animation: none; }
+  * { scroll-behavior: auto !important; }
 }

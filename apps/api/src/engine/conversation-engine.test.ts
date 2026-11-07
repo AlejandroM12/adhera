@@ -74,10 +74,11 @@ describe('ConversationEngine — validación', () => {
     expect(validateAnswer(byKey('wants_comments'), 'quizás').ok).toBe(false);
   });
 
-  it('valida fechas ISO', () => {
+  it('valida fechas ISO y DD/MM/AAAA', () => {
     const q: EngineQuestion = { id: 'd', key: 'start', label: 'Inicio', type: 'date', required: true, order: 1 };
-    expect(validateAnswer(q, '2026-05-01').ok).toBe(true);
-    expect(validateAnswer(q, '01/05/2026').ok).toBe(false);
+    expect(validateAnswer(q, '2026-05-01')).toEqual({ ok: true, value: '2026-05-01' });
+    expect(validateAnswer(q, '01/05/2026')).toEqual({ ok: true, value: '2026-05-01' });
+    expect(validateAnswer(q, '31/02/2026').ok).toBe(false);
   });
 });
 

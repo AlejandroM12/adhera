@@ -134,13 +134,13 @@ export function InterviewCard({ interview, showApplication }: { interview: Inter
             {showApplication && interview.application && (
               <>
                 {' · '}
-                <Link href={`/solicitudes/${interview.application.id}`} className="text-petrol-700 hover:underline">
+                <Link href={`/solicitudes/${interview.application.id}`} className="text-brand-700 hover:underline">
                   {interview.application.displayName}
                 </Link>
               </>
             )}
           </p>
-          <p className="text-xs text-slate-500">Asesor: {interview.advisor.displayName}</p>
+          <p className="text-xs text-slate-600">Asesor: {interview.advisor.displayName}</p>
         </div>
         <InterviewBadge status={interview.status} />
       </div>
@@ -172,7 +172,7 @@ export function InterviewCard({ interview, showApplication }: { interview: Inter
                 <Button size="sm" variant="outline" loading={m.isPending} onClick={() => m.mutate({ status: 'COMPLETED' })}>
                   Marcar realizada
                 </Button>
-                <Button size="sm" variant="ghost" className="text-rose-700" loading={m.isPending} onClick={() => {
+                <Button size="sm" variant="ghost" className="text-rose-800 hover:bg-rose-50" loading={m.isPending} onClick={() => {
                     if (window.confirm('¿Cancelar esta entrevista?')) m.mutate({ status: 'CANCELLED' });
                   }}>
                   Cancelar

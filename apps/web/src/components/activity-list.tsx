@@ -4,8 +4,8 @@ import { actorLabel, describeEvent } from '@/lib/labels';
 import { cn, formatDateTime, timeAgo } from '@/lib/utils';
 
 const DOT: Record<ActivityEvent['actorType'], string> = {
-  APPLICANT: 'bg-turq-400',
-  ADVISOR: 'bg-petrol-500',
+  APPLICANT: 'bg-petrol-400',
+  ADVISOR: 'bg-brand-500',
   SYSTEM: 'bg-slate-400',
 };
 
@@ -18,7 +18,7 @@ export function ActivityList({ events, showApplication = false }: { events: Acti
           <p className="text-sm text-slate-800">
             {showApplication && e.application && (
               <>
-                <Link href={`/solicitudes/${e.application.id}`} className="font-medium text-petrol-700 hover:underline">
+                <Link href={`/solicitudes/${e.application.id}`} className="font-medium text-brand-700 hover:underline">
                   {e.application.displayName}
                 </Link>
                 {' · '}

@@ -18,6 +18,9 @@ import { UsersController } from './auth/users.controller';
 import { WhatsAppController } from './whatsapp/whatsapp.controller';
 import { WhatsAppService } from './whatsapp/whatsapp.service';
 import { WhatsAppCloudAdapter } from './whatsapp/whatsapp.adapter';
+import { CatalogController } from './catalog/catalog.controller';
+import { TemplatesService } from './questionnaires/templates.service';
+import { PdfService } from './applications/pdf.service';
 
 @Module({
   controllers: [
@@ -30,15 +33,18 @@ import { WhatsAppCloudAdapter } from './whatsapp/whatsapp.adapter';
     InterviewsController,
     DashboardController,
     WhatsAppController,
+    CatalogController,
   ],
   providers: [
     PrismaService,
     AuthService,
     ActivityService,
     QuestionnairesService,
+    TemplatesService,
     SessionsService,
     SimulatorAdapter,
     ApplicationsService,
+    PdfService,
     InterviewsService,
     WhatsAppCloudAdapter,
     WhatsAppService,

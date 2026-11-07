@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export const viewport: Viewport = { themeColor: '#1a4e5e' };
+export const viewport: Viewport = { themeColor: '#162744' };
 
 /** Demostración comercial pública: mismo simulador y mismos endpoints, sin enlace al panel. */
 export default function DemoPage() {

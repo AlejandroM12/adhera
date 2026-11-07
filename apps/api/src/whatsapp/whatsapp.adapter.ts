@@ -46,9 +46,11 @@ export class WhatsAppCloudAdapter implements ChannelAdapter {
   }
 
   normalizeInbound(sessionId: string, raw: unknown): InboundMessage {
-    const { message, questionKey, value } = raw as { message: NormalizedInbound; questionKey: string; value: unknown };
+    const { message, questionKey, value, confirm } = raw as {
+      message: NormalizedInbound; questionKey: string; value: unknown; confirm?: number | 'reject';
+    };
     // El wamid es la clave de idempotencia: un reintento de Meta no duplica la respuesta.
-    return { sessionId, questionKey, value, requestId: message.id };
+    return { sessionId, questionKey, value, requestId: message.id, ...(confirm !== undefined ? { confirm } : {}) };
   }
 
   async receiveMessage(message: InboundMessage): Promise<void> {

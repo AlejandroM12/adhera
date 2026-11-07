@@ -16,6 +16,7 @@ import { ActivityList } from '@/components/activity-list';
 import { Avatar, KeyValueGrid, SectionCard } from '@/components/commercial';
 import { InterviewCard, ScheduleInterviewForm, useInvalidateAll } from '@/components/interview-forms';
 import { Button, Card, EmptyState, ErrorState, Field, InlineError, LoadingState, Select, Tabs, Textarea } from '@/components/ui';
+import { DossierView, PdfButton, PreinterviewNotice } from '@/components/dossier';
 
 type Tab = 'perfil' | 'respuestas' | 'historial' | 'notas' | 'entrevistas';
 
@@ -47,40 +48,50 @@ export default function ApplicationPage({ params }: { params: Promise<{ id: stri
   if (!q.data) return (<><BackLink /><LoadingState rows={5} /></>);
   const app = q.data;
   const contact = app.profile.find((f) => f.key === 'contact_channel')?.value;
-  const highlights = app.profile.filter((f) => f.key !== 'full_name' && !f.long && f.type !== 'yes_no').slice(0, 4);
+  // Preentrevista v2: datos útiles para la entrevista (los datos personales están en la ficha).
+  const V2_KEYS = ['plan_type', 'members_count', 'locality', 'contact_channel', 'contact_time'];
+  const highlights = app.dossier
+    ? V2_KEYS.map((k) => app.profile.find((f) => f.key === k)).filter((f) => f !== undefined).slice(0, 4)
+    : app.profile.filter((f) => f.key !== 'full_name' && !f.long && f.type !== 'yes_no').slice(0, 4);
 
   return (
     <>
       <BackLink />
 
       {/* Encabezado del perfil */}
-      <Card className="mb-4 p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+      <Card className="mb-3 p-4 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <Avatar name={app.displayName} size="lg" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-900" data-testid="application-name">
+              <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl" data-testid="application-name">
                 {app.displayName}
               </h1>
               <StatusBadge status={app.status} segment={app.segment} />
             </div>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-600">
               {app.completedAt ? `Enviada ${formatDateTime(app.completedAt)}` : `Iniciada ${formatDateTime(app.createdAt)} · sin enviar`}
-              {app.session && <> · Cuestionario v{app.session.questionnaire.version}</>} · Canal: {CHANNEL_LABEL[app.channel]}
+              {app.session && (
+                <> · Cuestionario v{app.session.questionnaire.version}{app.session.questionnaire.title ? ` (${app.session.questionnaire.title})` : ''}</>
+              )}{' '}
+              · Canal: {CHANNEL_LABEL[app.channel]}
             </p>
             {highlights.length > 0 && (
-              <dl className="mt-3 hidden flex-wrap gap-x-6 gap-y-2 sm:flex">
+              <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
                 {highlights.map((h) => (
                   <div key={h.key}>
-                    <dt className="text-[11px] uppercase tracking-wide text-slate-500">{h.label}</dt>
-                    <dd className="text-sm font-semibold text-petrol-900">{h.value}</dd>
+                    <dt className="text-xs text-slate-600">{h.label}</dt>
+                    <dd className="text-sm font-medium text-slate-900">{h.value}</dd>
                   </div>
                 ))}
               </dl>
             )}
           </div>
+          {app.dossier && <div className="shrink-0"><PdfButton app={app} /></div>}
         </div>
       </Card>
+
+      {app.dossier && <PreinterviewNotice app={app} />}
 
       {app.handoffRequestedAt && (
         <Banner tone="amber" icon={<Hand className="mt-0.5 size-4 shrink-0" />}>
@@ -101,21 +112,25 @@ export default function ApplicationPage({ params }: { params: Promise<{ id: stri
         </Banner>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="min-w-0 lg:col-span-2">
+      {/* Mobile: gestión → contenido → seguimiento. Desktop: contenido a la izquierda y columna de trabajo fija a la derecha. */}
+      <div className="grid gap-4 lg:grid-cols-3 lg:grid-rows-[auto_1fr]">
+        <section aria-label="Gestión de la solicitud" className="lg:col-start-3 lg:row-start-1">
+          <Management app={app} />
+        </section>
+        <div className="min-w-0 lg:col-span-2 lg:col-start-1 lg:row-span-2 lg:row-start-1">
           <Tabs<Tab>
             value={tab}
             onChange={setTab}
             tabs={[
-              { value: 'perfil', label: 'Perfil' },
-              { value: 'respuestas', label: 'Respuestas originales', count: app.answers.length },
+              { value: 'perfil', label: app.dossier ? 'Ficha' : 'Perfil' },
+              ...(app.dossier ? [] : [{ value: 'respuestas' as const, label: 'Respuestas', count: app.answers.length }]),
               { value: 'historial', label: 'Historial', count: activity.data?.length },
               { value: 'notas', label: 'Notas', count: app.notes.length },
               { value: 'entrevistas', label: 'Entrevistas', count: app.interviews.length },
             ]}
           />
           <div className="mt-4">
-            {tab === 'perfil' && <ProfileTab app={app} onGo={setTab} />}
+            {tab === 'perfil' && (app.dossier ? <DossierView app={app} dossier={app.dossier} /> : <ProfileTab app={app} onGo={setTab} />)}
             {tab === 'respuestas' && <AnswersTab app={app} />}
             {tab === 'historial' &&
               (activity.isError ? (
@@ -131,8 +146,7 @@ export default function ApplicationPage({ params }: { params: Promise<{ id: stri
             {tab === 'entrevistas' && <InterviewsTab app={app} />}
           </div>
         </div>
-        <aside className="flex flex-col gap-4" aria-label="Gestión comercial">
-          <Management app={app} />
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-6 lg:col-start-3 lg:row-start-2 lg:self-start" aria-label="Contacto y seguimiento">
           {app.contact && <ContactCard contact={app.contact} />}
           <NextSteps app={app} onGo={setTab} />
         </aside>
@@ -143,16 +157,16 @@ export default function ApplicationPage({ params }: { params: Promise<{ id: stri
 
 function BackLink() {
   return (
-    <Link href="/solicitudes" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-petrol-700">
-      <ArrowLeft className="size-4" /> Solicitudes
+    <Link href="/solicitudes" className="mb-3 inline-flex items-center gap-1 rounded text-sm text-slate-600 hover:text-brand-800">
+      <ArrowLeft className="size-4" aria-hidden /> Solicitudes
     </Link>
   );
 }
 
 function Banner({ tone, icon, children }: { tone: 'rose' | 'amber'; icon: React.ReactNode; children: React.ReactNode }) {
-  const styles = { rose: 'bg-rose-50 text-rose-900 ring-rose-200', amber: 'bg-amber-50 text-amber-900 ring-amber-200' };
+  const styles = { rose: 'border-rose-200 bg-rose-50 text-rose-950', amber: 'border-amber-200 bg-amber-50 text-amber-950' };
   return (
-    <div role="status" className={`mb-4 flex items-start gap-2 rounded-xl px-4 py-3 text-sm ring-1 ${styles[tone]}`}>
+    <div role="status" className={`mb-3 flex items-start gap-2 rounded-lg border px-4 py-2.5 text-sm ${styles[tone]}`}>
       {icon}
       <p>{children}</p>
     </div>
@@ -183,7 +197,7 @@ function Management({ app }: { app: ApplicationDetail }) {
       title="Gestión"
       action={
         saved ? (
-          <span role="status" className="flex items-center gap-1 text-xs text-turq-700">
+          <span role="status" className="flex items-center gap-1 text-xs text-petrol-700">
             <Check className="size-3.5" /> Guardado
           </span>
         ) : null
@@ -310,7 +324,7 @@ function ProfileTab({ app, onGo }: { app: ApplicationDetail; onGo: (t: Tab) => v
     <SectionCard
       title={
         <span className="flex items-center gap-2">
-          <Bot className="size-4 text-turq-600" /> Perfil comercial
+          <Bot className="size-4 text-petrol-600" aria-hidden /> Perfil comercial
         </span>
       }
       description="Resumen automático generado a partir de las respuestas. No infiere datos ausentes ni evalúa elegibilidad."
@@ -320,7 +334,7 @@ function ProfileTab({ app, onGo }: { app: ApplicationDetail; onGo: (t: Tab) => v
       ) : (
         <KeyValueGrid testId="summary" items={fields.map((f) => ({ key: f.key, label: f.label, value: f.value, long: f.long }))} />
       )}
-      <button onClick={() => onGo('respuestas')} className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-petrol-700 hover:underline">
+      <button onClick={() => onGo('respuestas')} className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline">
         <MessageSquareText className="size-4" /> Ver respuestas originales <ArrowRight className="size-3.5" />
       </button>
     </SectionCard>
@@ -333,7 +347,7 @@ function AnswersTab({ app }: { app: ApplicationDetail }) {
   }
   return (
     <Card className="overflow-hidden">
-      <p className="border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs text-slate-500">
+      <p className="border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs text-slate-600">
         Pregunta y respuesta tal como ocurrieron en la conversación {app.session && `(cuestionario v${app.session.questionnaire.version})`}. No
         son editables.
       </p>
@@ -344,15 +358,15 @@ function AnswersTab({ app }: { app: ApplicationDetail }) {
             className="grid gap-1 px-4 py-3 sm:grid-cols-[2rem_1fr_1fr_auto] sm:items-baseline sm:gap-4"
             data-testid={`answer-row-${a.questionKey}`}
           >
-            <span className="text-xs tabular-nums text-slate-400">{i + 1}.</span>
-            <span className="text-sm text-slate-600">{a.label}</span>
+            <span className="text-xs tabular-nums text-slate-500">{i + 1}.</span>
+            <span className="text-sm text-slate-700">{a.label}</span>
             <span className="text-sm font-medium text-slate-900" data-testid="answer-value">
               {a.display}
               {a.rawText && a.rawText !== a.display && a.type === 'text' && (
                 <span className="block text-xs font-normal text-slate-500">Texto original: {a.rawText}</span>
               )}
             </span>
-            <span className="text-xs text-slate-400" title={formatDateTime(a.answeredAt)}>
+            <span className="text-xs text-slate-500" title={formatDateTime(a.answeredAt)}>
               {formatTime(a.answeredAt)}
             </span>
           </li>
@@ -403,6 +417,8 @@ function NotesTab({ app }: { app: ApplicationDetail }) {
               <div className="min-w-0">
                 <p className="text-xs text-slate-500">
                   <span className="font-medium text-slate-700">{n.author.displayName}</span> · {formatDateTime(n.createdAt)}
+                  {n.kind === 'OBSERVATION' && ' · Observación sobre una respuesta'}
+                  {n.kind === 'CLARIFICATION' && (n.resolvedAt ? ' · Aclaración resuelta' : ' · Aclaración pendiente')}
                 </p>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{n.content}</p>
               </div>

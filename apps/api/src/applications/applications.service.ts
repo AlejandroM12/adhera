@@ -4,11 +4,12 @@ import { z } from 'zod';
 import { PrismaService } from '../common/prisma.service';
 import { ActivityService } from '../activity/activity.service';
 import { AdvisorPrincipal } from '../auth/auth.service';
-import { toEngineQuestion } from '../questionnaires/question-mapper';
+import { toAnswerMap, toEngineQuestion } from '../questionnaires/question-mapper';
 import {
-  AnswerMap, AnswerValue, buildProfile, buildSummary, formatAnswer, ProfileField,
+  AnswerMap, AnswerValue, buildProfile, buildSummary, formatAnswer, ProfileField, stepId,
 } from '../engine/conversation-engine';
 import { abandonCutoff, lastApplicantActivity, Segment, segmentOf, segmentWhere } from './segments';
+import { buildDossier, Dossier, ObservationNote } from './dossier';
 
 export const ListQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
@@ -20,6 +21,13 @@ export const ListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+export const NoteSchema = z.object({
+  content: z.string().trim().min(1, 'La nota no puede estar vacía.').max(2000),
+  /** Paso al que se refiere (`clave` o `clave#integrante`). */
+  questionKey: z.string().trim().max(80).optional(),
+  kind: z.enum(['NOTE', 'OBSERVATION', 'CLARIFICATION']).optional(),
+});
+
 export const UpdateSchema = z
   .object({
     status: z.nativeEnum(ApplicationStatus).optional(),
@@ -28,6 +36,23 @@ export const UpdateSchema = z
   .refine((v) => v.status !== undefined || v.assignedUserId !== undefined, 'Nada para actualizar.');
 
 const advisorActor = (a: AdvisorPrincipal) => ({ type: ActorType.ADVISOR, id: a.id });
+
+/** Datos que no se muestran como "datos clave" en listados (nombre e identificación personal). */
+const NAME_KEYS = new Set(['full_name', 'first_name', 'last_name']);
+const HIGHLIGHT_TYPES = new Set(['single_choice', 'number', 'text', 'locality']);
+/** Preentrevista v2: tipo de plan, localidad e integrantes adicionales. */
+const V2_HIGHLIGHTS = ['plan_type', 'locality', 'members_count'];
+
+/** "1 integrantes adicionales" -> "1 integrante adicional" (plurales simples del español). */
+export function countLabel(value: string, label: string): string {
+  const text = label.toLowerCase();
+  if (value !== '1') return `${value} ${text}`;
+  const singular = text
+    .split(' ')
+    .map((w) => (/[lrndz]es$/.test(w) ? w.slice(0, -2) : /[aeiou]s$/.test(w) ? w.slice(0, -1) : w))
+    .join(' ');
+  return `1 ${singular}`;
+}
 
 export interface ProfileInfo {
   profile: ProfileField[];
@@ -59,19 +84,15 @@ export class ApplicationsService {
         continue;
       }
       const questions = session.version.questions.map(toEngineQuestion);
-      const byId = new Map(questions.map((q) => [q.id, q.key]));
-      const map: AnswerMap = {};
-      for (const a of session.answers) {
-        const key = byId.get(a.questionId);
-        if (key) map[key] = (a.valueJson ?? null) as AnswerValue;
-      }
+      const map = toAnswerMap(questions, session.answers);
       const profile = buildProfile(questions, map);
       result.set(app.id, {
         profile,
-        highlights: profile
-          .filter((f) => f.key !== 'full_name' && !f.long && f.type !== 'yes_no')
+        highlights: (profile.some((f) => V2_HIGHLIGHTS.includes(f.key))
+          ? V2_HIGHLIGHTS.map((k) => profile.find((f) => f.key === k)).filter((f): f is ProfileField => Boolean(f))
+          : profile.filter((f) => !NAME_KEYS.has(f.key) && !f.long && f.type !== 'yes_no' && HIGHLIGHT_TYPES.has(f.type)))
           .slice(0, 3)
-          .map((f) => (f.type === 'number' ? `${f.value} ${f.label.toLowerCase()}` : f.value)),
+          .map((f) => (f.type === 'number' ? countLabel(f.value, f.label) : f.value)),
         answerCount: session.answers.length,
         lastActivityAt: lastApplicantActivity(session.startedAt, session.answers.map((a) => a.createdAt), app.createdAt),
       });
@@ -144,7 +165,7 @@ export class ApplicationsService {
           take: 1,
           include: {
             version: { include: { questionnaire: true, questions: { orderBy: { order: 'asc' } } } },
-            answers: true,
+            answers: { include: { revisions: { orderBy: { createdAt: 'asc' } } } },
             contact: {
               include: { deliveries: { orderBy: { createdAt: 'desc' }, take: 1 } },
             },
@@ -161,23 +182,33 @@ export class ApplicationsService {
     }> = [];
     let profile: ProfileField[] = [];
     let summary: string[] = [];
+    let dossier: Dossier | null = null;
     if (session) {
       const questions = session.version.questions.map(toEngineQuestion);
       const byId = new Map(questions.map((q) => [q.id, q]));
-      const map: AnswerMap = {};
+      const map: AnswerMap = toAnswerMap(questions, session.answers);
       answers = session.answers
         .map((a) => {
           const q = byId.get(a.questionId)!;
           const value = (a.valueJson ?? null) as AnswerValue;
-          map[q.key] = value;
           return {
-            questionKey: q.key, label: q.label, type: q.type, order: q.order,
+            questionKey: stepId(q.key, a.instance), label: q.label, type: q.type, order: q.order,
             value, display: formatAnswer(q, value), rawText: a.rawText, answeredAt: a.createdAt,
           };
         })
-        .sort((a, b) => a.order - b.order);
+        .sort((a, b) => a.order - b.order || a.questionKey.localeCompare(b.questionKey));
       profile = buildProfile(questions, map);
       summary = buildSummary(questions, map);
+      // Ficha por secciones e integrantes (preentrevista v2 o cualquier versión con secciones).
+      if (session.version.templateKey || questions.some((q) => q.meta?.section)) {
+        dossier = buildDossier({
+          questions,
+          rows: session.answers,
+          answers: map,
+          notes: app.notes as ObservationNote[],
+          version: { title: session.version.title, templateKey: session.version.templateKey },
+        });
+      }
     }
     const lastActivityAt = lastApplicantActivity(
       session?.startedAt,
@@ -211,10 +242,19 @@ export class ApplicationsService {
             status: session.status,
             startedAt: session.startedAt,
             completedAt: session.completedAt,
-            questionnaire: { name: session.version.questionnaire.name, version: session.version.version },
+            questionnaire: {
+              name: session.version.questionnaire.name,
+              version: session.version.version,
+              title: session.version.title,
+              templateKey: session.version.templateKey,
+            },
+            reviewConfirmedAt: session.reviewConfirmedAt,
+            consentAt: session.consentAt,
+            consentVersion: session.consentVersion,
           }
         : null,
       answers,
+      dossier,
       profile,
       summary,
     };
@@ -243,15 +283,42 @@ export class ApplicationsService {
     });
   }
 
-  async addNote(id: string, content: string, advisor: AdvisorPrincipal) {
+  /**
+   * Nota general u observación sobre una respuesta. Nunca modifica la declaración del interesado:
+   * se guarda aparte, con autor y fecha.
+   */
+  async addNote(id: string, input: z.infer<typeof NoteSchema>, advisor: AdvisorPrincipal) {
     await this.getOrThrow(id);
+    const kind = input.kind ?? (input.questionKey ? 'OBSERVATION' : 'NOTE');
     return this.prisma.$transaction(async (tx) => {
       const note = await tx.note.create({
-        data: { applicationId: id, authorId: advisor.id, content },
+        data: { applicationId: id, authorId: advisor.id, content: input.content, kind, questionKey: input.questionKey ?? null },
         include: { author: { select: { id: true, displayName: true } } },
       });
-      await this.activity.log(id, 'NOTE_ADDED', advisorActor(advisor), { noteId: note.id }, tx);
+      await this.activity.log(id, 'NOTE_ADDED', advisorActor(advisor), { noteId: note.id, kind, questionKey: input.questionKey ?? null }, tx);
       return note;
+    });
+  }
+
+  /** Auditoría: quién exportó la ficha y cuándo (sin contenido). */
+  async logExport(id: string, advisor: AdvisorPrincipal) {
+    await this.activity.log(id, 'PDF_EXPORTED', advisorActor(advisor), undefined);
+  }
+
+  /** Marca resuelta una aclaración pendiente (la nota original se conserva). */
+  async resolveNote(id: string, noteId: string, advisor: AdvisorPrincipal) {
+    const note = await this.prisma.note.findFirst({ where: { id: noteId, applicationId: id } });
+    if (!note) throw new NotFoundException('Nota inexistente.');
+    if (note.kind !== 'CLARIFICATION') throw new BadRequestException('Sólo se resuelven aclaraciones pendientes.');
+    if (note.resolvedAt) return note;
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.note.update({
+        where: { id: noteId },
+        data: { resolvedAt: new Date(), resolvedById: advisor.id },
+        include: { author: { select: { id: true, displayName: true } } },
+      });
+      await this.activity.log(id, 'CLARIFICATION_RESOLVED', advisorActor(advisor), { noteId, questionKey: note.questionKey }, tx);
+      return updated;
     });
   }
 
@@ -272,7 +339,7 @@ export class ApplicationsService {
       const questionKey = typeof payload?.questionKey === 'string' ? payload.questionKey : null;
       return {
         ...e,
-        payloadJson: questionKey ? { ...payload, questionLabel: labels.get(questionKey) ?? null } : payload,
+        payloadJson: questionKey ? { ...payload, questionLabel: labels.get(questionKey.split('#')[0]!) ?? null } : payload,
         actorName: e.actorId ? (names.get(e.actorId) ?? null) : null,
       };
     });

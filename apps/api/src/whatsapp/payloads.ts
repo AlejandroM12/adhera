@@ -142,6 +142,9 @@ export interface OutboundQuestion {
   type: string;
   required: boolean;
   options?: ChoiceOption[];
+  allowUnknown?: boolean;
+  allowPreferNot?: boolean;
+  otherLabel?: string;
 }
 
 export type GraphMessage = Record<string, unknown>;
@@ -218,14 +221,21 @@ export const NO_ID = 'no';
 export function questionMessage(to: string, q: OutboundQuestion, progress?: { answered: number; total: number }): GraphMessage {
   const footer = progress ? `Pregunta ${progress.answered + 1} de ${progress.total}` : undefined;
   const optional = q.required ? '' : '\n\n(Opcional: escribí OMITIR para saltearla.)';
-  const body = `${q.label}${optional}`;
+  const specials = [q.allowUnknown && 'NO SÉ', q.allowPreferNot && 'PREFIERO NO RESPONDER'].filter(Boolean);
+  const extra = specials.length ? `\n\nTambién podés responder ${specials.join(' o ')}.` : '';
+  const other = q.otherLabel ? `\n(${q.otherLabel}: escribilo con tus palabras.)` : '';
+  const body = `${q.label}${optional}${extra}${other}`;
 
   if (q.type === 'yes_no') {
     return buttonsMessage(to, body, [{ id: YES_ID, title: 'Sí' }, { id: NO_ID, title: 'No' }], footer);
   }
+  if (q.type === 'multi_choice' && q.options?.length) {
+    const numbered = q.options.map((o, i) => `${i + 1}. ${o.label}`).join('\n');
+    return textMessage(to, `${body}\n\n${numbered}\n\nRespondé con los números separados por coma (por ejemplo: 1, 3).${footer ? `\n\n_${footer}_` : ''}`);
+  }
   if (q.type === 'single_choice' && q.options?.length) {
     const opts = q.options;
-    if (opts.length <= LIMITS.buttons && opts.every((o) => o.label.length <= LIMITS.button)) {
+    if (!q.otherLabel && !specials.length && opts.length <= LIMITS.buttons && opts.every((o) => o.label.length <= LIMITS.button)) {
       return buttonsMessage(to, body, opts.map((o) => ({ id: o.value, title: o.label })), footer);
     }
     if (opts.length <= LIMITS.rows) {
@@ -234,8 +244,29 @@ export function questionMessage(to: string, q: OutboundQuestion, progress?: { an
     const numbered = opts.map((o, i) => `${i + 1}. ${o.label}`).join('\n');
     return textMessage(to, `${body}\n\n${numbered}\n\nRespondé con el número de la opción.${footer ? `\n\n_${footer}_` : ''}`);
   }
-  const hint = q.type === 'number' ? '\n\n(Respondé con un número.)' : q.type === 'date' ? '\n\n(Formato: AAAA-MM-DD.)' : '';
+  const hint =
+    q.type === 'number' ? '\n\n(Respondé con un número.)'
+      : q.type === 'date' ? '\n\n(Formato: DD/MM/AAAA.)'
+        : q.type === 'phone' ? '\n\n(Con código de área, por ejemplo 11 2345-6789.)'
+          : q.type === 'locality' ? '\n\n(Escribí el nombre de tu localidad.)'
+            : '';
   return textMessage(to, `${body}${hint}${footer ? `\n\n_${footer}_` : ''}`);
+}
+
+/** Respuesta ambigua: opciones numeradas para confirmar (0 = escribir de nuevo). */
+export function confirmationMessage(to: string, c: { message: string; options: string[] }): GraphMessage {
+  const numbered = c.options.map((o, i) => `${i + 1}. ${o}`).join('\n');
+  return textMessage(to, `${c.message}\n\n${numbered}\n0. Ninguna, quiero escribir de nuevo\n\nRespondé con el número.`);
+}
+
+/** Elección ante una confirmación: índice de la opción, 'reject' o null si no se entiende. */
+export function resolveConfirmation(options: string[], input: { replyId?: string; text?: string }): number | 'reject' | null {
+  const text = (input.text ?? input.replyId ?? '').trim();
+  const n = Number(text);
+  if (Number.isInteger(n) && n === 0) return 'reject';
+  if (Number.isInteger(n) && n >= 1 && n <= options.length) return n - 1;
+  const idx = options.findIndex((o) => o.toLowerCase() === text.toLowerCase());
+  return idx >= 0 ? idx : null;
 }
 
 /**

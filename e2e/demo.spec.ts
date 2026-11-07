@@ -21,7 +21,7 @@ test('demo pública: sin login, identificada como simulador, guarda la solicitud
   await answerText(page, name);
   await answerChoice(page, 'Familiar');
   await answerText(page, '1');
-  await expect(page.getByTestId('chat').getByRole('alert')).toContainText('El mínimo es 2');
+  await expect(page.getByTestId('composer').getByRole('alert')).toContainText('El mínimo es 2');
   await answerText(page, '3');
   await answerText(page, 'Ciudad Ficticia');
   await answerChoice(page, 'Correo electrónico');

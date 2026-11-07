@@ -81,7 +81,7 @@ export default function InterviewsPage() {
           <div className="flex flex-col gap-6">
             {ordered.map(([day, items]) => (
               <section key={day}>
-                <h2 className="mb-2 text-sm font-semibold capitalize text-slate-600">{day}</h2>
+                <h2 className="mb-2 text-sm font-semibold text-slate-700 first-letter:uppercase">{day}</h2>
                 <div className="grid gap-3 md:grid-cols-2">
                   {(filter === 'upcoming' ? items : [...items].reverse()).map((i) => (
                     <InterviewCard key={i.id} interview={i} showApplication />

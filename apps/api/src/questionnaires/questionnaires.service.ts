@@ -12,11 +12,17 @@ export const DraftQuestionSchema = z.object({
   key: z.string().trim().max(41),
   label: z.string().trim().max(300),
   shortLabel: z.string().trim().max(60).nullish(),
-  type: z.enum(['text', 'single_choice', 'number', 'yes_no', 'date']),
+  type: z.enum(['text', 'single_choice', 'number', 'yes_no', 'date', 'multi_choice', 'dni', 'phone', 'email', 'locality']),
   required: z.boolean(),
   options: z
-    .array(z.object({ value: z.string().trim().min(1).max(60), label: z.string().trim().min(1).max(120) }))
-    .max(20)
+    .array(
+      z.object({
+        value: z.string().trim().min(1).max(60),
+        label: z.string().trim().min(1).max(120),
+        exclusive: z.boolean().optional(),
+      }),
+    )
+    .max(30)
     .nullish(),
   condition: z
     .object({
@@ -24,6 +30,9 @@ export const DraftQuestionSchema = z.object({
       equals: primitive.optional(),
       notEquals: primitive.optional(),
       in: z.array(primitive).optional(),
+      includes: z.string().optional(),
+      excludes: z.string().optional(),
+      answered: z.boolean().optional(),
     })
     .nullish(),
   validation: z
@@ -33,12 +42,38 @@ export const DraftQuestionSchema = z.object({
       min: z.number().optional(),
       max: z.number().optional(),
       integer: z.boolean().optional(),
+      mustBeTrue: z.boolean().optional(),
+      mustBeTrueMessage: z.string().max(300).optional(),
+      dateRule: z.enum(['birth', 'birth_adult', 'future', 'past', 'any']).optional(),
+      pattern: z.string().max(200).optional(),
+      patternMessage: z.string().max(200).optional(),
     })
+    .nullish(),
+  /** Configuración de la plantilla (secciones, repetición por integrante, catálogos). Se conserva tal cual. */
+  meta: z
+    .object({
+      section: z.string().max(120).optional(),
+      help: z.string().max(300).optional(),
+      allowUnknown: z.boolean().optional(),
+      allowPreferNot: z.boolean().optional(),
+      otherLabel: z.string().max(60).optional(),
+      repeat: z.enum(['additional_members', 'all_members']).optional(),
+      block: z.string().max(40).optional(),
+      labelSelf: z.string().max(300).optional(),
+      role: z.string().max(40).optional(),
+      memberAge: z.object({ min: z.number().int().optional(), max: z.number().int().optional() }).optional(),
+      provinceKey: z.string().max(41).optional(),
+      placeholder: z.string().max(60).optional(),
+    })
+    .strict()
     .nullish(),
 });
 export const DraftSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
-  questions: z.array(DraftQuestionSchema).min(1).max(50),
+  /** Título y plantilla de origen del borrador (se heredan al crear un borrador desde una versión). */
+  title: z.string().trim().max(120).nullish(),
+  templateKey: z.string().max(40).nullish(),
+  questions: z.array(DraftQuestionSchema).min(1).max(80),
 });
 export type DraftInput = z.infer<typeof DraftSchema>;
 
@@ -83,6 +118,8 @@ export class QuestionnairesService {
         id: v.id,
         version: v.version,
         status: v.status,
+        title: v.title,
+        templateKey: v.templateKey,
         publishedAt: v.publishedAt,
         createdAt: v.createdAt,
         questionCount: v._count.questions,
@@ -109,6 +146,8 @@ export class QuestionnairesService {
         id: v.id,
         version: v.version,
         status: v.status,
+        title: v.title,
+        templateKey: v.templateKey,
         publishedAt: v.publishedAt,
         createdAt: v.createdAt,
         sessionCount: v._count.sessions,
@@ -134,7 +173,13 @@ export class QuestionnairesService {
       if (!draft) {
         const nextNumber = (questionnaire.versions[0]?.version ?? 0) + 1;
         draft = await tx.questionnaireVersion.create({
-          data: { questionnaireId, version: nextNumber, status: VersionStatus.DRAFT },
+          data: {
+            questionnaireId,
+            version: nextNumber,
+            status: VersionStatus.DRAFT,
+            title: input.title?.trim() || null,
+            templateKey: input.templateKey ?? null,
+          },
         });
       }
       const draftId = draft.id;
@@ -148,13 +193,14 @@ export class QuestionnairesService {
           type: q.type,
           required: q.required,
           order: i + 1,
-          optionsJson: q.type === 'single_choice' ? json(q.options) : Prisma.DbNull,
+          optionsJson: q.type === 'single_choice' || q.type === 'multi_choice' ? json(q.options) : Prisma.DbNull,
           conditionJson: json(q.condition),
           validationJson: json(q.validation),
+          metaJson: json(q.meta),
         })),
       });
       const errors = validateQuestionnaireDefinition(
-        input.questions.map((q, i) => ({ ...q, id: String(i), order: i + 1 })),
+        input.questions.map((q, i) => ({ ...q, id: String(i), order: i + 1 }) as EngineQuestion),
       );
       return { versionId: draftId, version: draft.version, errors };
     });
