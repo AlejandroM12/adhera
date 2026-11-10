@@ -20,6 +20,7 @@ function visitorIp(req: NextRequest): string {
  * - /api/*: el panel reenvía a la API. Agrega la IP del visitante y la clave compartida (PROXY_SECRET)
  *   para que los límites anti-abuso se apliquen por visitante y no al panel en conjunto.
  *   Cualquier valor de esos headers enviado por el navegador se descarta.
+ * - `/` sin sesión: muestra la landing comercial (/inicio) en la misma URL. Con sesión, es el resumen del panel.
  * - Rutas del panel: redirige al login si no hay cookie de sesión de asesor.
  *   La validación real (firma y vencimiento) la hace la API en cada request.
  */
@@ -38,7 +39,12 @@ export function middleware(req: NextRequest) {
     return NextResponse.next({ request: { headers } });
   }
 
-  const isPanel = pathname === '/' || PANEL_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  if (pathname === '/' && !req.cookies.get('adhera_session')) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/inicio';
+    return NextResponse.rewrite(url);
+  }
+  const isPanel = PANEL_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   if (isPanel && !req.cookies.get('adhera_session')) {
     const url = req.nextUrl.clone();
     url.pathname = '/login';

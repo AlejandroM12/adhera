@@ -55,10 +55,14 @@ test('demo pública: sin login, identificada como simulador, guarda la solicitud
 
 test('demo pública: el panel y la API administrativa siguen protegidos', async ({ page, request }) => {
   await page.goto('/demo');
-  for (const path of ['/', '/solicitudes', '/entrevistas', '/cuestionarios']) {
+  for (const path of ['/solicitudes', '/entrevistas', '/cuestionarios']) {
     await page.goto(path);
     await expect(page).toHaveURL(/\/login\?next=/);
   }
+  // Sin sesión, la raíz muestra la landing comercial (sin datos del panel).
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Automatizá las preentrevistas de afiliación por WhatsApp.');
+  await expect(page.getByRole('link', { name: 'Probar experiencia' }).first()).toHaveAttribute('href', '/demo');
   const r = await request.get('/api/applications');
   expect(r.status()).toBe(401);
 });

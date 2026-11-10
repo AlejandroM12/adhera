@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Check, CheckCheck, Link2, Pencil, RotateCcw, ShieldCheck, Sparkles } from 'lucide-react';
+import { Check, CheckCheck, ClipboardCheck, Link2, MonitorSmartphone, Pencil, RotateCcw, ShieldCheck, Sparkles } from 'lucide-react';
 import { api, ApiError, errorMessage } from '@/lib/api';
 import type { SessionState, TranscriptItem } from '@/lib/types';
 import { cn, newRequestId } from '@/lib/utils';
@@ -194,17 +194,23 @@ export function Simulator({ basePath = '/simulador', showPanelLink = true }: { b
   return (
     <div className="flex h-dvh flex-col bg-canvas sm:h-auto sm:min-h-dvh sm:items-center sm:justify-center sm:px-6 sm:py-8">
       <div className="mb-3 hidden w-full max-w-lg items-center justify-between sm:flex">
-        <Logo />
+        {showPanelLink ? <Logo /> : (
+          <Link href="/" aria-label="Adhera, inicio" className="rounded-md"><Logo /></Link>
+        )}
         {showPanelLink ? (
           <Link href="/solicitudes" className="rounded text-sm font-medium text-brand-700 hover:underline">
             Panel de asesores →
           </Link>
         ) : (
-          <span className="text-xs font-medium text-slate-600">Demostración con datos ficticios</span>
+          <span className="text-xs font-medium text-slate-600">Simulación web de la experiencia por WhatsApp</span>
         )}
       </div>
 
-      <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-white sm:h-[min(820px,90dvh)] sm:max-w-lg sm:flex-none sm:rounded-lg sm:border sm:border-slate-200">
+      <div className={cn(
+        'flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-white sm:max-w-lg sm:flex-none sm:rounded-lg sm:border sm:border-slate-200',
+        // En escritorio, la pantalla inicial ocupa sólo lo necesario; el chat, una altura fija.
+        phase === 'chat' ? 'sm:h-[min(820px,90dvh)]' : 'sm:h-auto',
+      )}>
         <header className="flex items-center gap-3 bg-brand-900 px-4 py-3 text-white">
           <Logo withText={false} light />
           <div className="min-w-0 flex-1">
@@ -238,7 +244,7 @@ export function Simulator({ basePath = '/simulador', showPanelLink = true }: { b
         </header>
 
         <p className="border-b border-slate-200 bg-slate-50 px-4 py-1.5 text-center text-xs text-slate-700" data-testid="demo-notice">
-          Demostración. Usá sólo datos ficticios.
+          Simulación web: no envía mensajes de WhatsApp. Usá sólo datos ficticios.
         </p>
 
         {phase === 'chat' && state && (
@@ -319,18 +325,25 @@ function Notice({
   accepted, setAccepted, onStart, busy, error,
 }: { accepted: boolean; setAccepted: (v: boolean) => void; onStart: () => void; busy: boolean; error?: string }) {
   return (
-    <div className="chat-bg flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4 [&>:first-child]:mt-auto">
+    // Pantalla inicial alineada arriba: en celulares altos evita el hueco entre el aviso y el primer mensaje.
+    <div className="chat-bg flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
       <Bubble from="bot">
         ¡Hola! Soy el asistente de <strong>Adhera</strong>. Te voy a hacer algunas preguntas para preparar tu entrevista con un asesor.
       </Bubble>
       <div className="msg-in rounded-lg border border-slate-200 bg-white p-4">
-        <p className="flex items-center gap-2 font-semibold text-slate-900">
-          <ShieldCheck className="size-5 text-petrol-600" aria-hidden /> Antes de empezar
-        </p>
-        <ul className="mt-2 space-y-1.5 text-sm text-slate-700">
-          <li>• Es una demostración: usá únicamente datos ficticios.</li>
-          <li>• Tus respuestas se guardan para que un asesor prepare la entrevista. No es una evaluación: no aprueba ni rechaza afiliaciones.</li>
-          <li>• Podés revisar y corregir tus respuestas antes de enviarlas.</li>
+        <ul className="space-y-3 text-sm leading-snug text-slate-700">
+          <li className="flex gap-2.5">
+            <MonitorSmartphone className="size-5 shrink-0 text-petrol-600" aria-hidden />
+            <span><strong className="font-semibold text-slate-900">Simulación web</strong> de una conversación por WhatsApp. No se envían mensajes reales.</span>
+          </li>
+          <li className="flex gap-2.5">
+            <ShieldCheck className="size-5 shrink-0 text-petrol-600" aria-hidden />
+            <span>Usá <strong className="font-semibold text-slate-900">sólo datos ficticios</strong>.</span>
+          </li>
+          <li className="flex gap-2.5">
+            <ClipboardCheck className="size-5 shrink-0 text-petrol-600" aria-hidden />
+            <span>Podés corregir tus respuestas antes de enviarlas. Es una preentrevista: no aprueba ni rechaza afiliaciones.</span>
+          </li>
         </ul>
         <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-md border border-slate-200 p-3 text-sm text-slate-900 has-[:checked]:border-petrol-500 has-[:checked]:bg-petrol-50">
           <input
